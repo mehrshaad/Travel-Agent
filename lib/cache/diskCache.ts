@@ -10,13 +10,21 @@ interface CacheEntry<T> {
 }
 
 export class DiskCache implements Cache {
+  private static warned = false;
   private hits = 0;
   private misses = 0;
+  private writeFailures = 0;
   private readonly entries = new Set<string>();
   private readonly directory: string;
 
-  constructor(namespace: string) {
-    this.directory = join(".cache", namespace);
+  /**
+   * Vercel's filesystem is read-only except /tmp, so the root has to be chosen at
+   * runtime — otherwise every write fails, the cache silently never works, and every
+   * Exa lookup becomes a fresh charge.
+   */
+  constructor(namespace: string, root?: string) {
+    const base = root ?? (process.env.VERCEL ? "/tmp/.cache" : ".cache");
+    this.directory = join(base, namespace);
   }
 
   async get<T>(key: string): Promise<T | null> {
@@ -52,7 +60,14 @@ export class DiskCache implements Cache {
       await mkdir(this.directory, { recursive: true });
       await writeFile(this.pathFor(keyHash), JSON.stringify(entry), "utf8");
       this.entries.add(keyHash);
-    } catch {}
+    } catch (error) {
+      // Do not fail the request, but do not hide it either: a dead cache costs money.
+      if (!DiskCache.warned) {
+        DiskCache.warned = true;
+        console.warn("[cache] write failed, caching is degraded:", (error as Error).message);
+      }
+      this.writeFailures += 1;
+    }
   }
 
   stats(): CacheStats {

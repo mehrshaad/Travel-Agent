@@ -101,11 +101,17 @@ async function requestJson<T>(opts: {
       controller.abort();
     }
 
+    // Build a real Headers instance: a plain object here loses User-Agent under
+    // Next.js's patched fetch, and Overpass answers 406 Not Acceptable without one.
+    const headers = new Headers(requestHeaders(opts.headers, opts.body) ?? {});
+    if (!headers.has("user-agent")) headers.set("user-agent", DEFAULT_UA);
+
     const response = await fetch(opts.url, {
       method: opts.method ?? "GET",
-      headers: requestHeaders(opts.headers, opts.body),
+      headers,
       body: requestBody(opts.body),
       signal: controller.signal,
+      cache: "no-store",
     });
 
     if (!response.ok) {
@@ -125,10 +131,24 @@ async function requestJson<T>(opts: {
   }
 }
 
+/**
+ * VERIFIED: Overpass answers 406 Not Acceptable when no User-Agent is sent, and
+ * Nominatim's usage policy requires an identifying one. Node's fetch sends none by
+ * default, so every request gets one here rather than in each provider.
+ */
+const DEFAULT_UA =
+  process.env.NOMINATIM_USER_AGENT ?? "Waylo/0.1 (+https://github.com/mehrshaad/Travel-Agent)";
+
+function withUserAgent(headers: Record<string, string> | undefined): Record<string, string> {
+  const has = Object.keys(headers ?? {}).some((k) => k.toLowerCase() === "user-agent");
+  return has ? { ...headers } : { ...headers, "User-Agent": DEFAULT_UA };
+}
+
 function requestHeaders(
   headers: Record<string, string> | undefined,
   body: unknown,
 ): Record<string, string> | undefined {
+  headers = withUserAgent(headers);
   if (body === undefined || typeof body === "string") {
     return headers;
   }
