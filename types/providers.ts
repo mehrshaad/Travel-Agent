@@ -22,6 +22,25 @@ export interface ProviderContext {
   mock?: boolean;
 }
 
+/* ---------------- Environment ---------------- */
+
+/**
+ * What `createProviders()` needs from the environment. Read from `process.env` at the
+ * edge and passed in — providers never touch `process.env` themselves, so they stay
+ * testable and so a missing key fails loudly in one place.
+ */
+export interface ProviderEnv {
+  EXA_API_KEY?: string;
+  /** Total Exa credit in USD. Default 10. */
+  EXA_BUDGET_USD?: number;
+  /** Fraction of budget past which free-text search degrades to Overpass. Default 0.8. */
+  EXA_SOFT_CAP_RATIO?: number;
+  /** Nominatim blocks generic agents — this must identify us and is required. */
+  NOMINATIM_USER_AGENT: string;
+  /** Force every provider into fixture mode. */
+  MOCK_MODE?: boolean;
+}
+
 /* ---------------- Geocoding ---------------- */
 
 export interface GeocodeProvider {
@@ -30,10 +49,31 @@ export interface GeocodeProvider {
   reverse(coords: LatLng, ctx?: ProviderContext): Promise<string | null>;
 }
 
+/**
+ * Nominatim does not return a timezone, but `Destination.timezone` is required.
+ * `createProviders()` therefore constructs the geocoder with a resolver — in practice
+ * the weather provider's `timezoneFor()`, which gets it free from `timezone=auto`.
+ *
+ * This is why the geocoder takes no timezone argument: the dependency is supplied once
+ * at construction, so `nominatim.ts` never imports `openMeteo.ts` directly.
+ */
+export interface GeocodeDeps {
+  resolveTimezone(coords: LatLng, ctx?: ProviderContext): Promise<string>;
+}
+
+export type GeocodeProviderFactory = (deps: GeocodeDeps) => GeocodeProvider;
+
 /* ---------------- Structured place search (Overpass) ---------------- */
 
 export interface PlaceSearchQuery {
   near: LatLng;
+  /**
+   * ISO 3166-1 alpha-2, lowercase, from `Destination.country`. Required to parse any
+   * `opening_hours` tag containing public-holiday rules (`PH`/`SH`) — the parser throws
+   * "Country code missing" without it. When absent, such tags must degrade to
+   * `{ unknown: true }` rather than throw.
+   */
+  countryCode?: string;
   radiusMeters: Meters;
   /** OR-ed together. Empty = all categories in `section`. */
   categories: PlaceCategory[];

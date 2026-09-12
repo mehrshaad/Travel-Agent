@@ -190,7 +190,8 @@ export interface WeatherDay {
 }
 
 export interface WeatherForecast {
-  tripId: string;
+  /** Attached by the API layer, not by the provider — a forecast is trip-agnostic. */
+  tripId?: string;
   days: WeatherDay[];
   fetchedAt: ISODateTime;
   source: "open_meteo";

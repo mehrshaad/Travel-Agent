@@ -117,9 +117,14 @@ Headers: User-Agent: <NOMINATIM_USER_AGENT>   ← required, they block generic a
 Map to `Destination`. Cache by normalized query, **TTL 30 days** — city coordinates
 don't move.
 
-⚠️ **Nominatim does not return a timezone.** Get it from Open-Meteo's `timezone=auto`
-(verified: returns `"America/Toronto"`). So `geocode()` calls `weather.timezoneFor()`.
-Wire that in `index.ts`, don't import openMeteo into nominatim directly.
+⚠️ **Nominatim does not return a timezone**, but `Destination.timezone` is required.
+Get it from Open-Meteo's `timezone=auto` (verified: returns `"America/Toronto"`).
+
+**Resolved in the contract:** `types/providers.ts` now declares `GeocodeDeps` and
+`GeocodeProviderFactory`. Export your geocoder as a factory taking `{ resolveTimezone }`;
+`createProviders()` passes the weather provider's `timezoneFor`. That is why `geocode()`
+has no timezone argument — the dependency arrives at construction, so `nominatim.ts`
+never imports `openMeteo.ts`.
 
 ✅ **Done when:** `"Montreal, Canada"` → `{ lat≈45.50, lng≈-73.57, city:"Montréal", country:"Canada", timezone:"America/Toronto" }`
 
@@ -159,8 +164,29 @@ Every ranking decision downstream is capped by how well you do this. Spend real 
 | `bike_share` | `amenity=bicycle_rental` | outdoor |
 | `gas_station` | `amenity=fuel` | outdoor |
 
-Also map category → `Interest[]` (museum → `["culture","art","history"]`,
-park → `["nature","walking","free"]`, cafe → `["coffee","food"]`, …).
+Also map every category to `Interest[]`. This is the canonical table — use it verbatim,
+an empty list is a valid answer, and `free` means "costs nothing to enter", not "cheap":
+
+| Category | Interests |
+|---|---|
+| `museum` | `history`, `culture`, `art` |
+| `gallery` | `art`, `culture` |
+| `landmark` | `history`, `culture` |
+| `historic` | `history`, `culture` |
+| `park` | `nature`, `walking`, `free`, `family` |
+| `viewpoint` | `nature`, `walking`, `free` |
+| `bookstore` | `books`, `culture`, `free` |
+| `restaurant` | `food` |
+| `cafe` | `coffee`, `food` |
+| `bakery` | `food`, `coffee` |
+| `bar` | `nightlife`, `food` |
+| `nightlife` | `nightlife` |
+| `shopping` | `shopping` |
+| `event` | `culture`, `family` |
+| `tourist_info` | `culture`, `free` |
+| `hotel`, `hostel`, `rental` | *(none — stay is not an interest)* |
+| `transit_stop`, `parking`, `bike_share`, `gas_station` | *(none)* |
+| `pharmacy`, `grocery`, `convenience`, `atm`, `laundry`, `restroom`, `luggage_storage`, `sim_provider` | *(none — essentials are looked up on demand, never ranked by interest)* |
 
 > ⚠️ **`ambience` correctness IS the weather demo.** The whole hero moment is "rain →
 > swap outdoor for indoor." One museum tagged `outdoor` and the demo makes the product
@@ -189,6 +215,18 @@ park → `["nature","walking","free"]`, cafe → `["coffee","food"]`, …).
 Use the `opening_hours` npm package (already in `package.json`). **Do not write your own
 parser** — the OSM format has rules like `Mo-Fr 09:00-12:00,13:00-17:00; PH off` and a
 hand-rolled subset parser will silently produce wrong "closed" answers.
+
+⚠️ **Public-holiday rules need a country.** Verified: `new opening_hours("Mo-Fr 09:00-12:00,13:00-17:00; PH off")`
+throws `Country code missing which is needed to select the correct holidays`. Passing a
+nominatim-shaped second argument fixes it:
+
+```ts
+new OpeningHours(raw, { address: { country_code: countryCode }, lat, lon })
+```
+
+**Resolved in the contract:** `PlaceSearchQuery.countryCode` now carries ISO 3166-1
+alpha-2 (lowercase) from `Destination.country`. Thread it through to `hours.ts`. When it
+is absent, a tag containing `PH`/`SH` must degrade to `{ unknown: true }` — never throw.
 
 When parsing throws or the tag is missing → `{ weekly: [], unknown: true }`.
 
@@ -263,6 +301,10 @@ tempC > -5 && tempC < 35 && windKph < 40
 than 2 hours** — a single drizzly hour is not worth replanning a day around, and a
 twitchy replanner reads as broken rather than smart. `severity` from precipitation
 amount + duration.
+
+**Resolved in the contract:** `WeatherForecast.tripId` is now **optional**. A forecast is
+trip-agnostic, so the provider leaves it unset and the API layer attaches it. Do not add a
+`tripId` parameter to `forecast()`.
 
 Cache TTL **1 hour** — forecasts change, and a stale forecast defeats the entire feature.
 
@@ -392,7 +434,12 @@ random café returns `{}` without erroring.
 
 ### B11 — `index.ts` + `usage.ts`
 
-Wire everything into `createProviders(env): ProviderRegistry`. `usage()` returns the
+Wire everything into `createProviders(env: ProviderEnv): ProviderRegistry`.
+
+**Resolved in the contract:** `ProviderEnv` is now declared in `types/providers.ts` with
+`EXA_API_KEY`, `EXA_BUDGET_USD`, `EXA_SOFT_CAP_RATIO`, `NOMINATIM_USER_AGENT` and
+`MOCK_MODE`. Read `process.env` at the edge and pass the object in — providers must never
+touch `process.env` themselves, so they stay testable and a missing key fails in one place. `usage()` returns the
 live `UsageMeter` (Exa spend, searches, LLM calls, cache hit rate) — the UI renders it
 as a credit-burn meter.
 
