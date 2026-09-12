@@ -1,0 +1,17 @@
+# Lane ownership. Fill in GitHub handles before enabling branch protection.
+
+/types/            @ali
+/docs/             @ali
+/app/api/          @ali
+/lib/itinerary/    @ali
+
+/app/              @ali
+/components/       @ali
+/styles/           @ali
+/hooks/            @ali
+
+/lib/providers/    @sara
+/lib/cache/        @sara
+
+/lib/agents/       @paria
+/lib/llm/          @paria
