@@ -52,6 +52,9 @@ button { font: inherit; cursor: pointer; }
 /* A brief glance left then right. Applied to the agent's head, not the eyes, because
    the blink already owns the eyes' transform and two animations cannot share one. */
 @keyframes wl-look   { 0%,62%,100%{transform:translateX(0)} 68%,74%{transform:translateX(1.6px)} 80%,86%{transform:translateX(-1.6px)} 92%{transform:translateX(0)} }
+/* Indeterminate top bar: a short segment sweeping across, so a slow route change reads
+   as "working" rather than "stuck". */
+@keyframes wl-progress { 0%{left:-35%;width:35%} 55%{width:45%} 100%{left:100%;width:25%} }
 @keyframes wl-screen { from{opacity:0;transform:translateY(14px) scale(.995)} to{opacity:1;transform:none} }
 @keyframes wl-row    { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
 
