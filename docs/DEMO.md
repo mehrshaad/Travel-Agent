@@ -1,109 +1,117 @@
-# Waylo — 2 minute walkthrough
+# Waylo — the 2 minute run
 
 **https://waylo-lemon.vercel.app**
 
-Share that link, never a `waylo-<hash>` one — those sit behind Vercel login.
-
-**Before you start:** open `/today` once and click **Transit**. That warms the caches so
-nothing spins on stage. Allow location when `/now` asks.
+Two things before you hit record: open `/today` and click **Transit** once so the caches
+are warm, and say yes when the browser asks for your location. Locally, set
+`NEXT_PUBLIC_RECORDING=1` in `.env.local` — it hides the Next dev badge and the
+CopilotKit watermark so the recording is just the product.
 
 ---
 
-## 0:00 — The hook *(15s)*
+### The hook — 15 seconds
 
-Open the landing page.
+Landing page. Don't read the screen, just say it:
 
-> "Most travel AI writes you an itinerary once, and then you're on your own.
-> Waylo keeps re-planning the trip **while you're on it**."
+> "Every travel app plans your trip before you leave. Then you land, it rains, and
+> you're on your own with a PDF.
+>
+> Waylo stays with you."
 
 Click **Open demo trip**.
 
 ---
 
-## 0:15 — It already changed your day *(30s)*
+### It already fixed today — 30 seconds
 
-You land on Today. Point at the black banner.
+You're on Today. The black bar is the whole pitch, so let it breathe for a second.
 
-> "Rain at 3 PM. So Nimbus moved Mount Royal to Thursday and dropped the archaeology
-> museum into that slot — indoors, six minutes from lunch. Dash re-routed the walk.
-> **Every change comes with the reason.**"
+> "So I haven't touched anything yet — and it's already moved something.
+>
+> Rain at three. Mount Royal was outdoors at two, so Nimbus pushed it to Thursday and
+> pulled the archaeology museum into that slot. Indoors, six minutes from where I'm
+> eating lunch.
+>
+> And it tells me *why*. That's the part I care about."
 
-Click **Keep it**. It confirms.
-
----
-
-## 0:45 — Three ways to make the same trip *(30s)*
-
-In the Route card, click **Walking → Transit → Taxi**. Totals change, the map line
-changes colour, métro stations appear.
-
-Point at the last leg:
-
-> "Orange line to Snowdon, change to Blue, out at Outremont. **Those are real stations** —
-> the whole métro network came out of OpenStreetMap. And look here —"
-
-Point at a short leg reading **WALK INSTEAD**.
-
-> "— it refuses to put you on a train for 600 metres."
-
-Now drag a stop by its grip.
-
-> "Reorder the day, and the route on the map follows."
+Click **Keep it**.
 
 ---
 
-## 1:15 — What should I do *right now* *(30s)*
+### Now argue with it — 30 seconds
 
-Click the **✨ What should I do right now?** button.
+Hit **Walking**, then **Transit**, then **Taxi**. Let the numbers move.
 
-> "This asks my browser where I actually am, checks the live forecast, and looks at
-> what's open near me and what's left in today's budget."
+> "Same day, three ways. Four and a half hours on foot, two and a half by métro, and
+> about fifty bucks if I'm lazy."
 
-Read the answer aloud — it will name a real café, a real distance, the real temperature.
+Land on Transit. Point at the Damas leg.
 
-Change the budget number, ask again.
+> "Orange line to Snowdon, change to Blue, off at Outremont — that's a real route. We
+> pulled the whole métro network out of OpenStreetMap."
 
-> "Different budget, different answer."
+Then find the leg that says **WALK INSTEAD**:
+
+> "And this one's my favourite. It won't put me on a train for 600 metres. It just says
+> walk."
+
+Grab a stop by the handle and drag it somewhere else.
+
+> "Move something, and the map redraws the route."
 
 ---
 
-## 1:45 — The crew can change the trip *(15s)*
+### Where I'm actually standing — 30 seconds
 
-Open the chat bubble, bottom right. Type:
+Click **✨ What should I do right now?**
+
+> "This one asks my browser where I am. Then it checks the real forecast, what's open
+> around me, and what's left of today's money."
+
+Read what it says out loud — it'll be a real café, a real walk, the real temperature.
+Then drop the budget to $15 and ask again.
+
+> "Fifteen dollars. Different answer."
+
+---
+
+### Just tell it — 15 seconds
+
+Open the chat bubble. Type:
 
 ```
 Move the bookstore to position 2
 ```
 
-The plan reorders and the map follows.
+Watch the list reorder and the map follow.
 
-> "It didn't describe what to do. **It did it.**"
-
----
-
-## Close
-
-> "Eight agents, live weather, live places, real transit. Built on free tiers —
-> OpenStreetMap, Open-Meteo, OSRM, and free models. The only thing we pay for is search,
-> and the app shows you the meter."
+> "It didn't tell me how to do that. It just did it."
 
 ---
 
-## If something stalls
+### Land it
 
-Say what you see — none of it is fatal:
+> "Eight agents. Live weather, live places, real transit, and it explains every call it
+> makes. All of it on free tiers — the only thing we pay for is search, and there's a
+> meter for that right in the app."
 
-- **Explore looks stale** → the badge says *offline sample*; it fell back and told you.
-- **The crew is slow** → free models. There's a four-model failover behind it.
-- **Location denied** → it uses your booked hotel instead, and says so.
+---
 
-## Two questions you'll get
+## If it wobbles
 
-**"Is this real or mocked?"**
-Places, weather, walking distances, métro lines and stations are live. Fares and
-per-mode durations are modelled and labelled as such — there's no GTFS feed, so nothing
-pretends to be a timetable.
+Don't apologise — the fallbacks are the point:
 
-**"What does the LLM actually do?"**
-Writes the prose and runs the chat. Ranking, routing and re-planning are deterministic —
-so a rate limit costs you phrasing, never correctness.
+- Explore looks stale → the badge literally says *offline sample*. "It degraded and told
+  me it degraded."
+- Crew is slow → "Free models. There's a four-model failover behind it."
+- Location denied → it uses the booked hotel. "That's the designed path."
+
+## The two questions you'll get
+
+**"How much of this is real?"** — Places, weather, walking distances, métro lines and
+stations are live. Fares and per-mode times are modelled, and the app says so. No GTFS
+feed, so nothing pretends to be a timetable.
+
+**"What's the model actually doing?"** — Writing the prose and running the chat. The
+ranking, routing and re-planning are deterministic. A rate limit costs you nicer
+wording, never a wrong plan.

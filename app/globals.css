@@ -58,3 +58,24 @@ button { font: inherit; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+
+/* ---------------------------------------------------------------------------
+   Recording mode — set NEXT_PUBLIC_RECORDING=1 in .env.local.
+   Hides the things that belong to the tooling rather than the product, so a
+   screen recording shows only Waylo. Production is unaffected unless the flag
+   is set there too.
+   --------------------------------------------------------------------------- */
+
+[data-recording="1"] nextjs-portal,
+[data-recording="1"] .poweredByContainer,
+[data-recording="1"] .poweredBy {
+  display: none !important;
+}
+
+/* The dev overlay renders outside the React tree, so belt and braces. */
+[data-recording="1"] #__next-build-watcher,
+[data-recording="1"] [data-nextjs-toast],
+[data-recording="1"] [data-nextjs-dialog-overlay] {
+  display: none !important;
+}

@@ -18,7 +18,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body data-recording={process.env.NEXT_PUBLIC_RECORDING === "1" ? "1" : undefined}>
+        {children}
+      </body>
     </html>
   );
 }
