@@ -278,29 +278,8 @@ Return `{}` rather than throwing whenever there is no match. TTL 30 days.
 Do not touch any other file.
 ```
 
-### B11 — wire it up
 
-```
-Task B11 from docs/SARA_PLAN.md: implement `lib/providers/index.ts` and
-`lib/providers/usage.ts`.
 
-Export `createProviders(env): ProviderRegistry` satisfying the interface in
-types/providers.ts exactly, with no `any` and no type assertions.
-
-- Wire nominatim's timezone lookup to openMeteo's `timezoneFor()` here. This is the
-  composition point, so nominatim.ts must not import openMeteo.ts.
-- `usage()` returns the live UsageMeter: Exa spend, search count, LLM call count,
-  cache hit rate.
-- When `ctx.mock === true`, every provider must return fixtures from
-  `lib/mock/fixtures/` and make ZERO network calls. Read those fixtures; do not
-  create or edit them, they belong to the lead.
-
-Then run `npm run typecheck` and fix anything in MY files only.
-
-Do not touch any other file.
-```
-
----
 
 ## §3 Self-review prompt — before every PR
 
