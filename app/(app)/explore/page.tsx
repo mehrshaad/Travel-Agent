@@ -63,8 +63,10 @@ export default function Explore() {
     slot: r.place.category,
   }));
 
+  // The chips must filter whatever is on screen. Previously live results bypassed the
+  // filter entirely, so every chip looked broken once real data arrived.
   const source = liveCards.length ? liveCards : PLACES;
-  const filtered = liveCards.length ? source : PLACES.filter((p) => matches(cat, p));
+  const filtered = source.filter((p) => matches(cat, p));
 
   return (
     <div style={{ animation: "wl-screen .46s cubic-bezier(.22,.68,.16,1) both", maxWidth: 1240, margin: "0 auto" }}>

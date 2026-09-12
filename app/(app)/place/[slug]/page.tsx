@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { ALTS, PLACES, SAVES, STAYS, TODAY, TRANSPORT } from "@/lib/mock/ui";
 import { photoFor } from "@/lib/photos";
 import { slugify } from "@/lib/slug";
-import { ImageSlot } from "@/components/ImageSlot";
+import { PlaceGallery } from "@/components/PlaceGallery";
+import { GoogleMapsDirectionsLink } from "@/components/GoogleMapsDirectionsLink";
 import { MapFrame } from "@/components/MapFrame";
 import { Eyebrow, MONO, SERIF } from "@/components/ui";
 
@@ -49,9 +51,47 @@ function findPlace(slug: string): Detail | null {
   return null;
 }
 
+/**
+ * Live results come from OpenStreetMap, so their names are not in the curated lists and
+ * findPlace misses them — which 404'd every Explore card the moment real data loaded.
+ * Fall back to the same ranked feed Explore renders and match on the slug.
+ */
+async function findLivePlace(slug: string): Promise<Detail | null> {
+  try {
+    const h = await headers();
+    const host = h.get("host");
+    if (!host) return null;
+    const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") || host.startsWith("127.") ? "http" : "https");
+
+    const res = await fetch(
+      `${proto}://${host}/api/trips/trip_montreal_demo/recommendations?section=explore&limit=30`,
+      { cache: "no-store" },
+    );
+    const body = await res.json();
+    if (!body?.ok) return null;
+
+    const hit = (body.data as { place: { name: string; category: string; rating?: number; avgCost?: { amount: number } }; why: { text: string; agent: string }; distanceMeters?: number }[])
+      .find((r) => slugify(r.place.name) === slug);
+    if (!hit) return null;
+
+    return {
+      name: hit.place.name,
+      meta: [hit.place.category, hit.place.rating ? `${hit.place.rating} ★` : null, hit.distanceMeters ? `${hit.distanceMeters} m away` : null]
+        .filter(Boolean)
+        .join(" · "),
+      price: hit.place.avgCost?.amount ? `$${hit.place.avgCost.amount}` : "Free",
+      why: hit.why.text,
+      agent: hit.why.agent,
+      mapQuery: "day=2",
+    };
+  } catch {
+    return null;
+  }
+}
+
 export default async function PlaceBySlug({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const place = findPlace(slug);
+  const place = findPlace(slug) ?? (await findLivePlace(slug));
   if (!place) notFound();
 
   const photo = photoFor(place.name);
@@ -64,18 +104,21 @@ export default async function PlaceBySlug({ params }: { params: Promise<{ slug: 
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 20 }}>
         <div>
-          <ImageSlot
-            placeholder={place.name}
-            photo={photo}
-            radius={24}
-            style={{ display: "block", width: "100%", height: "clamp(220px,30vw,320px)" }}
+          <PlaceGallery
+            hero={photo}
+            name={place.name}
+            gallerySlugs={["drawn-quarterly", "cafe-interior", "old-montreal"]}
           />
           <div style={{ border: "1px solid var(--wl-line)", borderRadius: 20, overflow: "hidden", marginTop: 14, background: "#FFF" }}>
             <div style={{ position: "relative", height: 190, background: "#EFEAE1" }}>
               <MapFrame query={place.mapQuery} title={`${place.name} on the map`} />
             </div>
             <div style={{ padding: "12px 16px", fontSize: 13, color: "var(--wl-muted)" }}>
-              Montréal · on your day-2 route
+              <GoogleMapsDirectionsLink
+                address="Montréal · on your day-2 route"
+                destination={`${place.name}, Montréal, QC`}
+                placeName={place.name}
+              />
             </div>
           </div>
         </div>

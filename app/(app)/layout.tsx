@@ -116,7 +116,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 3
               </span>
             </button>
-            <div
+            <Link
+              href="/profile"
+              aria-label="Your learned profile"
+              title="Your profile"
               style={{
                 width: 34,
                 height: 34,
@@ -131,7 +134,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               }}
             >
               SA
-            </div>
+            </Link>
           </div>
         </div>
       </header>

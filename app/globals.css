@@ -49,6 +49,9 @@ button { font: inherit; cursor: pointer; }
 @keyframes wl-up     { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 @keyframes wl-blink  { 0%,92%,100%{transform:scaleY(1)} 96%{transform:scaleY(.1)} }
 @keyframes wl-wink   { 0%,88%,100%{transform:scaleY(1)} 93%,97%{transform:scaleY(.1)} }
+/* A brief glance left then right. Applied to the agent's head, not the eyes, because
+   the blink already owns the eyes' transform and two animations cannot share one. */
+@keyframes wl-look   { 0%,62%,100%{transform:translateX(0)} 68%,74%{transform:translateX(1.6px)} 80%,86%{transform:translateX(-1.6px)} 92%{transform:translateX(0)} }
 @keyframes wl-screen { from{opacity:0;transform:translateY(14px) scale(.995)} to{opacity:1;transform:none} }
 @keyframes wl-row    { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
 

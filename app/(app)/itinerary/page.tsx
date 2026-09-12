@@ -12,6 +12,7 @@ import { Eyebrow, MONO, SERIF } from "@/components/ui";
 export default function Itinerary() {
   const router = useRouter();
   const [day, setDay] = useState(2);
+  const [answered, setAnswered] = useState<Record<string, string>>({});
   const plan = PLANS[day];
 
   return (
@@ -27,7 +28,10 @@ export default function Itinerary() {
           </h1>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button style={{ border: "1px solid #E4DBCC", background: "#FFF", fontSize: 13.5, fontWeight: 700, padding: "10px 16px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8 }}>
+          <button
+            onClick={() => window.print()}
+            style={{ border: "1px solid #E4DBCC", background: "#FFF", fontSize: 13.5, fontWeight: 700, padding: "10px 16px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8 }}
+          >
             <Download size={16} strokeWidth={2} color="currentColor" />
             Export
           </button>
@@ -129,21 +133,37 @@ export default function Itinerary() {
               <HelpCircle size={14} strokeWidth={2} color="currentColor" />
               Open questions from Atlas
             </Eyebrow>
-            {QUESTIONS.map((q) => (
-              <div key={q.text} style={{ padding: "12px 0", borderBottom: "1px solid #F3EDE3" }}>
-                <p style={{ margin: "0 0 10px", fontSize: 14, color: "var(--wl-ink-2)" }}>{q.text}</p>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button style={{ border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 12.5, fontWeight: 700, padding: "8px 14px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 7 }}>
-                    <Check size={16} strokeWidth={2} color="currentColor" />
-                    {q.yes}
-                  </button>
-                  <button style={{ border: "1px solid #E4DBCC", background: "#FFF", fontSize: 12.5, fontWeight: 700, padding: "8px 14px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 7 }}>
-                    <X size={16} strokeWidth={2} color="currentColor" />
-                    {q.no}
-                  </button>
+            {QUESTIONS.map((q) => {
+              const choice = answered[q.text];
+              return (
+                <div key={q.text} style={{ padding: "12px 0", borderBottom: "1px solid #F3EDE3" }}>
+                  <p style={{ margin: "0 0 10px", fontSize: 14, color: "var(--wl-ink-2)" }}>{q.text}</p>
+                  {choice ? (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, background: "#EAF4F2", color: "#0F6F68", fontSize: 12, fontWeight: 700 }}>
+                      <Check size={14} strokeWidth={2} color="currentColor" />
+                      {choice} · Atlas has it
+                    </span>
+                  ) : (
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <button
+                        onClick={() => setAnswered((a) => ({ ...a, [q.text]: q.yes }))}
+                        style={{ border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 12.5, fontWeight: 700, padding: "8px 14px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 6 }}
+                      >
+                        <Check size={14} strokeWidth={2} color="currentColor" />
+                        {q.yes}
+                      </button>
+                      <button
+                        onClick={() => setAnswered((a) => ({ ...a, [q.text]: q.no }))}
+                        style={{ border: "1px solid #E4DBCC", background: "#FFF", fontSize: 12.5, fontWeight: 700, padding: "8px 14px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 6 }}
+                      >
+                        <X size={14} strokeWidth={2} color="currentColor" />
+                        {q.no}
+                      </button>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

@@ -62,7 +62,7 @@ export default function Profile() {
                 const eyeDelay = `${((i * 1.7) % 5).toFixed(1)}s`;
                 return (
                   <div key={a.name} style={{ display: "flex", alignItems: "center", gap: 10, padding: 10, borderRadius: 14, background: "var(--wl-bg)" }}>
-                    <div style={{ flex: "0 0 auto", width: 30, height: 30, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", gap: 3.5, background: a.color }}>
+                    <div style={{ flex: "0 0 auto", width: 30, height: 30, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", gap: 3.5, background: a.color, animation: i % 3 === 1 ? `wl-look ${10 + (i % 3)}s ease-in-out infinite ${(i * 1.7) % 6}s` : undefined }}>
                       <span style={{ width: 4, height: 4, borderRadius: "50%", background: "rgba(0,0,0,.6)", animation: wink ? "none" : `wl-blink ${eyeDur} infinite`, animationDelay: eyeDelay }} />
                       <span style={{ width: 4, height: 4, borderRadius: "50%", background: "rgba(0,0,0,.6)", animation: `${wink ? "wl-wink" : "wl-blink"} ${eyeDur} infinite`, animationDelay: eyeDelay }} />
                     </div>

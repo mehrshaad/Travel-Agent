@@ -81,6 +81,9 @@ export default function Generating() {
                     justifyContent: "center",
                     gap: 4,
                     background: a.color,
+                    // Roughly a third of the crew glance around; the rest hold still,
+                    // so the row reads as alive rather than as a bank of metronomes.
+                    animation: i % 3 === 1 ? `wl-look ${9 + (i % 4)}s ease-in-out infinite ${(i * 1.3) % 5}s` : undefined,
                   }}
                 >
                   <span style={{ width: 5, height: 5, borderRadius: "50%", background: "rgba(0,0,0,.62)", animation: wink ? "none" : `wl-blink ${eyeDur} infinite`, animationDelay: eyeDelay }} />

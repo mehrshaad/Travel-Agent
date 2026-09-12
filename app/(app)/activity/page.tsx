@@ -1,8 +1,31 @@
+"use client";
+
 import { Undo2 } from "lucide-react";
+
 import { FEED } from "@/lib/mock/ui";
+import { liveLabel, useLive } from "@/components/useLive";
+import { useState } from "react";
 import { MONO, SERIF } from "@/components/ui";
 
+interface ToolTrace {
+  agent: string;
+  tool: string;
+  ms: number;
+  cached: boolean;
+  ok: boolean;
+  costUsd: number;
+  error?: string;
+  detail: string;
+}
+
 export default function Activity() {
+  // The real audit trail: every upstream the crew has actually called this session.
+  const live = useLive<{ calls: ToolTrace[]; usage: { exaSpentUsd: number; exaBudgetUsd: number; cacheHitRate: number } }>(
+    "/api/trips/trip_montreal_demo/activity",
+  );
+  const badge = liveLabel(live);
+  const [undone, setUndone] = useState<string[]>([]);
+
   return (
     <div style={{ animation: "wl-screen .46s cubic-bezier(.22,.68,.16,1) both", maxWidth: 860, margin: "0 auto" }}>
       <h1 style={{ margin: "0 0 6px", fontFamily: SERIF, fontWeight: 400, fontSize: "clamp(28px,3.6vw,40px)", lineHeight: 1.05 }}>
@@ -30,7 +53,9 @@ export default function Activity() {
                 {f.when}
               </span>
             </div>
-            <p style={{ margin: "0 0 10px", fontSize: 14.5, color: "var(--wl-ink-2)" }}>{f.text}</p>
+            <p style={{ margin: "0 0 10px", fontSize: 14.5, color: "var(--wl-ink-2)", textDecoration: undone.includes(f.text) ? "line-through" : "none", opacity: undone.includes(f.text) ? 0.55 : 1 }}>
+              {f.text}
+            </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
               <span style={{ padding: "5px 11px", borderRadius: 999, background: "var(--wl-sand-bg)", fontSize: 11.5, fontWeight: 700, color: "var(--wl-muted)" }}>
                 {f.tag}

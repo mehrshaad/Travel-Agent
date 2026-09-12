@@ -6,8 +6,8 @@ import { CREW, INITIAL_CHAT, REPLIES, type ChatMessage } from "@/lib/mock/ui";
 import { Eyebrow, MONO, SERIF } from "@/components/ui";
 
 const ATLAS_FALLBACK =
-  "On it. I’ll check that against today’s remaining $86, the 15:00 rain window and your 19:00 table, " +
-  "then come back with two options — one that keeps the plan and one that rewrites the afternoon.";
+  "I could not reach the crew just then. Try again, or ask through the chat bubble — it can also " +
+  "change the plan for you.";
 
 export default function CrewChat() {
   const [chat, setChat] = useState<ChatMessage[]>(INITIAL_CHAT);
@@ -18,16 +18,40 @@ export default function CrewChat() {
     setChat((c) => c.concat([{ user: true, text: label }, { agent: r.who, role: r.role, color: r.color, text: r.text }]));
   };
 
-  const send = () => {
+  const [thinking, setThinking] = useState(false);
+
+  /**
+   * Ask the live crew rather than replaying one canned paragraph. The ✨ endpoint knows
+   * the real weather, what is open nearby and the remaining budget, so the answer
+   * actually responds to the question.
+   */
+  const send = async () => {
     const d = draft.trim();
-    if (!d) return;
+    if (!d || thinking) return;
     setDraft("");
-    setChat((c) =>
-      c.concat([
-        { user: true, text: d },
-        { agent: "Atlas", role: "orchestrator", color: "#7A5AF8", text: ATLAS_FALLBACK },
-      ]),
-    );
+    setChat((c) => c.concat([{ user: true, text: d }]));
+    setThinking(true);
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 25000);
+    try {
+      const res = await fetch("/api/trips/trip_montreal_demo/now", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({ location: { lat: 45.5017, lng: -73.5673 }, remaining: 86, question: d }),
+      });
+      const body = await res.json();
+      const text = body?.ok
+        ? `${body.data.headline} ${body.data.narrative}`
+        : ATLAS_FALLBACK;
+      setChat((c) => c.concat([{ agent: "Atlas", role: "orchestrator", color: "#7A5AF8", text }]));
+    } catch {
+      setChat((c) => c.concat([{ agent: "Atlas", role: "orchestrator", color: "#7A5AF8", text: ATLAS_FALLBACK }]));
+    } finally {
+      clearTimeout(timer);
+      setThinking(false);
+    }
   };
 
   return (
@@ -142,7 +166,7 @@ export default function CrewChat() {
             placeholder="Ask about food, weather, money, anything…"
             style={{ flex: "1 1 220px", minWidth: 0, border: "1px solid var(--wl-line)", borderRadius: 999, padding: "13px 18px", font: "inherit", fontSize: 14.5, outline: "none", background: "var(--wl-bg)", color: "var(--wl-ink)" }}
           />
-          <button onClick={send} style={{ flex: "0 0 auto", border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 14, fontWeight: 700, padding: "13px 22px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8 }}>
+          <button onClick={send} disabled={thinking} style={{ flex: "0 0 auto", border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 14, fontWeight: 700, padding: "13px 22px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8, opacity: thinking ? 0.6 : 1 }}>
             Send
             <Send size={16} strokeWidth={2} color="currentColor" />
           </button>

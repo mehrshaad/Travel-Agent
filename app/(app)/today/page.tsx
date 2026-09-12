@@ -70,6 +70,7 @@ export default function Today() {
   const [order, setOrder] = useState<number[]>(() => TODAY.map((_, i) => i));
   const [dragging, setDragging] = useState<number | null>(null);
   const [mode, setMode] = useState<Mode>("transit");
+  const [kept, setKept] = useState(false);
   const [plan, setPlan] = useState<LegsResponse | null>(null);
   const [planning, setPlanning] = useState(false);
   const [over, setOver] = useState<number | null>(null);
@@ -359,9 +360,13 @@ export default function Today() {
             <Eye size={16} strokeWidth={2} color="currentColor" />
             See the reasoning
           </button>
-          <button style={{ border: 0, background: "var(--wl-bg)", color: "var(--wl-ink)", fontSize: 13.5, fontWeight: 700, padding: "10px 16px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8 }}>
+          <button
+            onClick={() => setKept(true)}
+            disabled={kept}
+            style={{ border: 0, background: kept ? "rgba(251,248,243,.18)" : "var(--wl-bg)", color: kept ? "var(--wl-bg)" : "var(--wl-ink)", fontSize: 13.5, fontWeight: 700, padding: "10px 16px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8 }}
+          >
             <Check size={16} strokeWidth={2} color="currentColor" />
-            Keep it
+            {kept ? "Kept — Nimbus won't ask again" : "Keep it"}
           </button>
         </div>
       </div>

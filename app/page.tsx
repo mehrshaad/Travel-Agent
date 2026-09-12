@@ -46,12 +46,12 @@ export default function Landing() {
           <span style={{ fontSize: 19, fontWeight: 800, letterSpacing: "-.02em" }}>Waylo</span>
         </div>
         <nav style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: "var(--wl-muted)", padding: "8px 4px" }}>
+          <a href="#how-it-works" style={{ fontSize: 14, fontWeight: 600, color: "var(--wl-muted)", padding: "8px 4px" }}>
             How it works
-          </span>
-          <span style={{ fontSize: 14, fontWeight: 600, color: "var(--wl-muted)", padding: "8px 4px" }}>
+          </a>
+          <Link href="/profile" style={{ fontSize: 14, fontWeight: 600, color: "var(--wl-muted)", padding: "8px 4px" }}>
             Agents
-          </span>
+          </Link>
           <Link
             href="/today"
             style={{
@@ -254,6 +254,7 @@ export default function Landing() {
       </div>
 
       <div
+        id="how-it-works"
         style={{
           borderTop: "1px solid var(--wl-line)",
           padding: "clamp(26px,3vw,42px) clamp(18px,4vw,54px)",
