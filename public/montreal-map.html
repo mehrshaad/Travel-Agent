@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Waylo · Montreal route</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<style>
+  html, body { margin:0; height:100%; background:#EFEAE1; font-family:Manrope, system-ui, sans-serif; }
+  #map { position:absolute; inset:0; }
+  .leaflet-tile-pane { filter: saturate(.6) sepia(.14) brightness(1.04); }
+  .leaflet-container { background:#EFEAE1; }
+  .wl-pin { display:flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%;
+    border:3px solid #fff; box-shadow:0 6px 14px rgba(23,21,15,.3); color:#fff; font-weight:800; font-size:12.5px; }
+  .wl-pop { font-family:Manrope, system-ui, sans-serif; }
+  .wl-pop b { display:block; font-size:14px; margin-bottom:2px; color:#17150F; }
+  .wl-pop span { font-size:12px; color:#6B6458; }
+  .leaflet-popup-content-wrapper { border-radius:14px; }
+  .leaflet-control-attribution { font-size:10px; background:rgba(255,255,255,.82); }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+  var CORAL = '#F2724B', AMBER = '#F2A93B', TEAL = '#1FA39A', VIOLET = '#7A5AF8', SAND = '#C9A227';
+
+  var DAYS = {
+    1: [
+      { name: 'Montréal–Trudeau (YUL)', note: '14:20 · 747 bus, 45 min', ll: [45.45773, -73.74960], color: TEAL },
+      { name: 'Hôtel Nelligan',         note: '16:00 · check in',        ll: [45.50478, -73.55372], color: SAND },
+      { name: 'Old Port · Quai de l’Horloge', note: '17:30 · 1.4 km stroll', ll: [45.50850, -73.54620], color: AMBER },
+      { name: 'Byblos le Petit Café',   note: '19:30 · Persian, $24',    ll: [45.53350, -73.58220], color: CORAL }
+    ],
+    2: [
+      { name: 'Café Olimpico',          note: '08:45 · coffee, Mile End',        ll: [45.52355, -73.60148], color: CORAL },
+      { name: 'Place Jacques-Cartier',  note: '09:30 · Old Montreal walk',       ll: [45.50750, -73.55330], color: AMBER },
+      { name: 'Notre-Dame Basilica',    note: '11:15 · timed entry',             ll: [45.50450, -73.55630], color: AMBER },
+      { name: 'Café Tehran',            note: '12:45 · Persian lunch',           ll: [45.52480, -73.59480], color: CORAL },
+      { name: 'Pointe-à-Callière',      note: '14:00 · swapped in for the rain', ll: [45.50230, -73.55420], color: TEAL },
+      { name: 'Librairie Bertrand',     note: '16:30 · bookstore, indoors',      ll: [45.50160, -73.55680], color: VIOLET },
+      { name: 'Damas',                  note: '19:00 · dinner, Outremont',       ll: [45.52030, -73.61280], color: CORAL }
+    ],
+    3: [
+      { name: 'Mount Royal · Kondiaronk', note: '09:00 · moved here by Nimbus', ll: [45.50450, -73.58730], color: AMBER },
+      { name: 'St-Viateur Bagel',       note: '12:00 · cash only',              ll: [45.52250, -73.60420], color: CORAL },
+      { name: 'Drawn & Quarterly',      note: '13:30 · bookstore',              ll: [45.52310, -73.59440], color: VIOLET },
+      { name: 'Jean-Talon Market',      note: '16:00 · covered aisles',         ll: [45.53660, -73.61470], color: AMBER },
+      { name: 'Le Petit Local',         note: '19:00 · $29 tasting',            ll: [45.47370, -73.60440], color: CORAL }
+    ],
+    4: [
+      { name: 'Musée des Beaux-Arts',   note: '09:30 · 2 h',              ll: [45.49860, -73.57950], color: AMBER },
+      { name: 'Kem CoBa',               note: '12:30 · café, $9',         ll: [45.51990, -73.59360], color: CORAL },
+      { name: 'Mile End record shops',  note: '14:00 · Echo’s pick',  ll: [45.52330, -73.59490], color: VIOLET },
+      { name: 'Notre-Dame · AURA show', note: '18:00 · last night',       ll: [45.50450, -73.55630], color: AMBER }
+    ]
+  };
+
+  var PLACES = {
+    bertrand: [{ name: 'Librairie Bertrand', note: '430 rue Saint-Pierre · 6 min walk', ll: [45.50160, -73.55680], color: VIOLET }]
+  };
+
+  var q = new URLSearchParams(location.search);
+  var stops = q.get('place') ? (PLACES[q.get('place')] || PLACES.bertrand) : (DAYS[q.get('day')] || DAYS[2]);
+  var single = stops.length === 1;
+
+  var map = L.map('map', { zoomControl: !q.get('static'), scrollWheelZoom: false, dragging: !q.get('static') });
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors', maxZoom: 19
+  }).addTo(map);
+
+  if (!single) {
+    L.polyline(stops.map(function (s) { return s.ll; }), {
+      color: '#17150F', weight: 2.5, opacity: .5, dashArray: '7 7'
+    }).addTo(map);
+  }
+
+  stops.forEach(function (s, i) {
+    L.marker(s.ll, {
+      icon: L.divIcon({
+        className: '',
+        html: '<div class="wl-pin" style="background:' + s.color + '">' + (single ? '★' : i + 1) + '</div>',
+        iconSize: [28, 28], iconAnchor: [14, 14]
+      })
+    }).addTo(map).bindPopup('<div class="wl-pop"><b>' + s.name + '</b><span>' + s.note + '</span></div>');
+  });
+
+  if (single) map.setView(stops[0].ll, 16);
+  else map.fitBounds(L.latLngBounds(stops.map(function (s) { return s.ll; })).pad(0.14));
+</script>
+</body>
+</html>

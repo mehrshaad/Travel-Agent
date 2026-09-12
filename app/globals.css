@@ -1,0 +1,56 @@
+/* Waylo Aurora — tokens ported from the design canvas. */
+
+:root {
+  --wl-bg: #FBF8F3;
+  --wl-card: #FFFFFF;
+  --wl-ink: #17150F;
+  --wl-ink-2: #3A352B;
+  --wl-muted: #6B6458;
+  --wl-faint: #7E7667;
+  --wl-line: #EDE5D8;
+  --wl-line-2: #DDD3C2;
+  --wl-accent: #E0603C;
+  --wl-sand-bg: #F7F3EC;
+
+  /* Agent crew colours — each agent owns one hue across every screen. */
+  --wl-atlas: #7A5AF8;   /* orchestrator */
+  --wl-dash: #1FA39A;    /* transport */
+  --wl-morsel: #F2724B;  /* food */
+  --wl-muse: #F2A93B;    /* attractions */
+  --wl-echo: #EA5E9B;    /* personalization */
+  --wl-nest: #C9A227;    /* stay */
+  --wl-nimbus: #57C4E1;  /* weather */
+  --wl-fixer: #B9A27A;   /* local needs */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--wl-bg);
+  color: var(--wl-ink);
+  font-family: Manrope, system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-wrap: pretty;
+}
+
+a { color: var(--wl-accent); text-decoration: none; }
+a:hover { color: var(--wl-ink); }
+::placeholder { color: var(--wl-faint); }
+
+button { font: inherit; cursor: pointer; }
+
+@keyframes wl-float  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+@keyframes wl-float2 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }
+@keyframes wl-pulse  { 0%,100%{opacity:.25;transform:scale(1)} 50%{opacity:.6;transform:scale(1.35)} }
+@keyframes wl-spin   { to { transform:rotate(360deg) } }
+@keyframes wl-up     { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+@keyframes wl-blink  { 0%,92%,100%{transform:scaleY(1)} 96%{transform:scaleY(.1)} }
+@keyframes wl-screen { from{opacity:0;transform:translateY(14px) scale(.995)} to{opacity:1;transform:none} }
+@keyframes wl-row    { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+}

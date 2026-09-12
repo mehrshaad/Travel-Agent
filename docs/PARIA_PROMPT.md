@@ -16,7 +16,7 @@ How to use this file:
 ## §1 Session prompt — paste first, every session
 
 ```
-You are working on RoamPilot, a multi-agent travel companion app, as part of a
+You are working on Waylo, a multi-agent travel companion app, as part of a
 three-person team. Each person owns a strict slice of the repo.
 
 I am Paria. I own Lane C: `lib/agents/**` and `lib/llm/**`. ONLY those.

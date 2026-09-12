@@ -1,4 +1,4 @@
-# RoamPilot — API Contract v0.1
+# Waylo — API Contract v0.1
 
 Source of truth for types: [`types/index.ts`](../types/index.ts). This document defines
 the wire shape; the TS file defines the data shape. **If they disagree, the TS file wins.**

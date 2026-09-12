@@ -308,31 +308,73 @@ carrying an honest `confidence` and `note`.
 
 ### B9 — `exa.ts` ← **the one that spends real money**
 
+**Canonical reference: https://docs.exa.ai/reference/search-api-guide-for-coding-agents**
+If anything below contradicts real API behaviour, that URL wins — fetch it and tell the team.
+
 ```
 POST https://api.exa.ai/search
 Headers: x-api-key: <EXA_API_KEY>, Content-Type: application/json
-Body: { "query": "...", "numResults": 10, "type": "auto",
-        "contents": { "text": { "maxCharacters": 800 } } }
+Body: {
+  "query": "...",
+  "type": "auto",
+  "numResults": 10,
+  "contents": { "highlights": true }
+}
 ```
 
-**Budget: $0.007/search, $10 total ≈ 1,400 searches.** Verified against
-`docs.exa.ai/reference/pricing`.
+Note: Exa's own quickstart shows the **Python** SDK (`exa_py`). We are on TypeScript, so call the
+REST endpoint directly with `fetch` — the JSON body above is the same either way. Raw JSON and the
+JS SDK use **camelCase** (`numResults`, `maxCharacters`); only the Python SDK uses snake_case.
 
-Non-negotiable guards:
+**Use `highlights`, not `text`.** Highlights return query-relevant excerpts, which keep token cost
+predictable. Only request `text` (always with `maxCharacters`) if something downstream genuinely
+needs whole-page context.
 
-1. **Cache before spending.** Key = `(normalizedQuery, city, section)`, **TTL 7 days**,
-   on disk. Check the cache *before* the budget check.
+⚠️ **Parameter traps — these are the ones that actually bite:**
+
+- `text`, `highlights` and `summary` must be **nested inside `contents`** on `/search`. They are
+  top-level only on `/contents`. Getting this wrong silently returns no content.
+- `useAutoprompt` — deprecated, remove it.
+- `livecrawl: "always"` — deprecated. Use `contents.maxAgeHours: 0` for a forced refresh.
+- `includeUrls` / `excludeUrls` do not exist — it is `includeDomains` / `excludeDomains`.
+- `numSentences`, `highlightsPerUrl`, `tokensNum` — all gone. Use `highlights: true` and
+  `contents.text.maxCharacters`.
+
+**Search type, and what it costs us.** `type` changes the price, so it is a budget decision:
+
+| type | latency | price | use it for |
+|---|---|---|---|
+| `instant` | ~250 ms | $7 / 1k | quick lookups |
+| `fast` | ~450 ms | $7 / 1k | latency-sensitive paths |
+| `auto` | ~1 s | $7 / 1k | **our default** |
+| `deep-lite` / `deep` | 4–15 s | **$12 / 1k** | only if we ever need multi-source synthesis |
+| `deep-reasoning` | 12–40 s | **$15 / 1k** | not on this budget |
+
+> Stay on `auto`. A `deep` search costs nearly **double** and our whole budget is ~1,400 searches.
+> Do not switch types without saying so — it changes the burn rate immediately.
+
+**Budget: $0.007/search on `auto`, $10 total ≈ 1,400 searches.** Verified against
+`docs.exa.ai/reference/pricing`. Non-negotiable guards:
+
+1. **Cache before spending.** Key = `(normalizedQuery, city, section)`, **TTL 7 days**, on disk.
+   Check the cache *before* the budget check.
 2. **`numResults` hard-capped at 10.** Results past 10 bill extra per result.
-3. `remainingBudgetUsd()` = `EXA_BUDGET_USD − spent`, persisted to disk so a server
-   restart doesn't reset the tally and quietly overspend.
-4. `canSpend()` → `false` past `EXA_SOFT_CAP_RATIO` (0.8). Callers then fall back to
-   Overpass. **Never throw** — degrade.
-5. Every call records `costUsd: 0.007` on its `ToolCall`.
+3. `remainingBudgetUsd()` = `EXA_BUDGET_USD − spent`, persisted to disk so a server restart doesn't
+   reset the tally and quietly overspend.
+4. `canSpend()` → `false` past `EXA_SOFT_CAP_RATIO` (0.8). Callers then fall back to Overpass.
+   **Never throw** — degrade.
+5. Every call records `costUsd` on its `ToolCall`.
 
-Add a query prefix for local flavour: `` `${query} in ${city} — local recommendations, not tourist traps` ``
+Add a query suffix for local flavour: `` `${query} in ${city} — local recommendations, not tourist traps` ``
 
-✅ **Done when:** the same query twice spends once; spend is still correct after a
-restart; crossing the soft cap flips `canSpend()` to false instead of throwing.
+**Optional, later:** `outputSchema` on `/search` returns grounded structured JSON in
+`output.content` with per-field citations in `output.grounding`, and works on `auto` — so it does
+not force a pricier type. That could let Exa hand back `{name, address, why}` directly instead of us
+parsing prose. Worth a try **only after** the cheap path works; keep schemas flat (max depth 2,
+max 10 properties).
+
+✅ **Done when:** the same query twice spends once; spend is still correct after a restart; crossing
+the soft cap flips `canSpend()` to false instead of throwing.
 
 ### B10 — `wikipedia.ts`
 

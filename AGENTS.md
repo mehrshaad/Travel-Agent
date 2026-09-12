@@ -1,4 +1,4 @@
-# AGENTS.md — RoamPilot
+# AGENTS.md — Waylo
 
 Auto-loaded by Codex, Claude Code, and Cursor. **Read before editing anything.**
 Humans: this is also the contributing guide. There is no second document.

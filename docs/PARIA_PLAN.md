@@ -95,7 +95,7 @@ POST https://openrouter.ai/api/v1/chat/completions
 Headers:
   Authorization: Bearer <OPENROUTER_API_KEY>
   HTTP-Referer: http://localhost:3000
-  X-Title: RoamPilot
+  X-Title: Waylo
 Body: { model, messages: [...], temperature, max_tokens }
 ```
 

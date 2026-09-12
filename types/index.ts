@@ -1,5 +1,5 @@
 /**
- * RoamPilot — shared type contract.
+ * Waylo — shared type contract.
  * Single source of truth for UI <-> API. Import from both sides; do not fork.
  */
 
