@@ -1,7 +1,3 @@
-Yes — this is actually a **very strong idea for a multi-agent hackathon project**, because the agents have clearly separated responsibilities, but the final product feels like one intelligent travel assistant rather than a collection of bots.
-
-The key is to make it more than “AI generates a travel itinerary.” Your differentiator should be:
-
 > **An agentic travel companion that continuously adapts an ongoing trip based on the traveler’s preferences, behavior, budget, location, weather, and what is happening around them.**
 
 So instead of planning a trip once, your app helps **manage the trip while it is happening**.
