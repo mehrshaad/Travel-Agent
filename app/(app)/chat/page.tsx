@@ -43,16 +43,23 @@ export default function CrewChat() {
           </h1>
         </div>
         <div style={{ display: "flex" }}>
-          {CREW.map((a) => (
-            <div
-              key={a.name}
-              title={`${a.name} · ${a.role}`}
-              style={{ width: 30, height: 30, borderRadius: "50%", border: "2px solid #FBF8F3", marginLeft: -7, display: "flex", alignItems: "center", justifyContent: "center", gap: 3, background: a.color }}
-            >
-              <span style={{ width: 3.5, height: 3.5, borderRadius: "50%", background: "rgba(0,0,0,.6)", animation: "wl-blink 6s infinite" }} />
-              <span style={{ width: 3.5, height: 3.5, borderRadius: "50%", background: "rgba(0,0,0,.6)", animation: "wl-blink 6s infinite" }} />
-            </div>
-          ))}
+          {CREW.map((a, i) => {
+            // Every third agent winks (one eye); each gets its own delay/duration so the crew
+            // never blinks in unison. Derived from i, so it is stable across renders.
+            const wink = i % 3 === 2;
+            const eyeDur = `${(3.6 + (i % 5) * 0.6).toFixed(1)}s`;
+            const eyeDelay = `${((i * 1.7) % 5).toFixed(1)}s`;
+            return (
+              <div
+                key={a.name}
+                title={`${a.name} · ${a.role}`}
+                style={{ width: 30, height: 30, borderRadius: "50%", border: "2px solid #FBF8F3", marginLeft: -7, display: "flex", alignItems: "center", justifyContent: "center", gap: 3, background: a.color }}
+              >
+                <span style={{ width: 3.5, height: 3.5, borderRadius: "50%", background: "rgba(0,0,0,.6)", animation: wink ? "none" : `wl-blink ${eyeDur} infinite`, animationDelay: eyeDelay }} />
+                <span style={{ width: 3.5, height: 3.5, borderRadius: "50%", background: "rgba(0,0,0,.6)", animation: `${wink ? "wl-wink" : "wl-blink"} ${eyeDur} infinite`, animationDelay: eyeDelay }} />
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -67,6 +74,10 @@ export default function CrewChat() {
       >
         {chat.map((m, i) => {
           const isUser = !!m.user;
+          // Same index-derived stagger as the crew stack above: every third speaker winks.
+          const wink = i % 3 === 2;
+          const eyeDur = `${(3.6 + (i % 5) * 0.6).toFixed(1)}s`;
+          const eyeDelay = `${((i * 1.7) % 5).toFixed(1)}s`;
           return (
             <div
               key={i}
@@ -84,8 +95,8 @@ export default function CrewChat() {
                   <span style={{ fontSize: 12, fontWeight: 800, color: "var(--wl-muted)" }}>SA</span>
                 ) : (
                   <>
-                    <span style={{ width: 4.5, height: 4.5, borderRadius: "50%", background: "rgba(0,0,0,.6)", animation: "wl-blink 4s infinite" }} />
-                    <span style={{ width: 4.5, height: 4.5, borderRadius: "50%", background: "rgba(0,0,0,.6)", animation: "wl-blink 4s infinite" }} />
+                    <span style={{ width: 4.5, height: 4.5, borderRadius: "50%", background: "rgba(0,0,0,.6)", animation: wink ? "none" : `wl-blink ${eyeDur} infinite`, animationDelay: eyeDelay }} />
+                    <span style={{ width: 4.5, height: 4.5, borderRadius: "50%", background: "rgba(0,0,0,.6)", animation: `${wink ? "wl-wink" : "wl-blink"} ${eyeDur} infinite`, animationDelay: eyeDelay }} />
                   </>
                 )}
               </div>

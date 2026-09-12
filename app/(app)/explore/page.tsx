@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { BookOpen, Coffee, Compass, House, Landmark, Moon, Tag, Utensils } from "lucide-react";
 import { CATEGORIES, PLACES } from "@/lib/mock/ui";
+import { liveLabel, useLive } from "@/components/useLive";
+import type { Recommendation } from "@/types";
 import { ImageSlot } from "@/components/ImageSlot";
 import { slugify } from "@/lib/slug";
 import { photoFor } from "@/lib/photos";
@@ -40,7 +42,29 @@ function matches(cat: string, p: (typeof PLACES)[number]) {
 export default function Explore() {
   const router = useRouter();
   const [cat, setCat] = useState("All");
-  const filtered = PLACES.filter((p) => matches(cat, p));
+
+  // Live places from OpenStreetMap, ranked server-side. If the upstream is slow or
+  // down we fall back to the curated list and say so rather than showing nothing.
+  const live = useLive<Recommendation[]>(
+    "/api/trips/trip_montreal_demo/recommendations?section=explore&limit=12&radius=1500",
+  );
+  const badge = liveLabel(live);
+
+  const liveCards = (live.data ?? []).map((r) => ({
+    name: r.place.name,
+    meta: [r.place.category, r.place.rating ? `${r.place.rating} ★` : null, r.distanceMeters ? `${r.distanceMeters} m` : null]
+      .filter(Boolean)
+      .join(" · "),
+    price: r.place.avgCost?.amount ? `$${r.place.avgCost.amount}` : "Free",
+    why: r.why.text,
+    agent: r.why.agent,
+    agentColor: r.place.ambience === "indoor" ? "#1FA39A" : "#F2A93B",
+    match: `${Math.round(r.score * 100)}%`,
+    slot: r.place.category,
+  }));
+
+  const source = liveCards.length ? liveCards : PLACES;
+  const filtered = liveCards.length ? source : PLACES.filter((p) => matches(cat, p));
 
   return (
     <div style={{ animation: "wl-screen .46s cubic-bezier(.22,.68,.16,1) both", maxWidth: 1240, margin: "0 auto" }}>
@@ -51,6 +75,12 @@ export default function Explore() {
         Ranked for you, not for everyone. Every card says which agent found it and why it survived the
         filter.
       </p>
+      <div style={{ marginBottom: 18 }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "5px 11px", borderRadius: 999, background: badge.bg, color: badge.fg, fontSize: 11.5, fontWeight: 700 }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: "currentColor" }} />
+          {badge.text}
+        </span>
+      </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
         {CATEGORIES.map((label) => {

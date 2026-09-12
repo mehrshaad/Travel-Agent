@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CalendarDays, Check, Clock, CloudRain, Eye, Footprints, Sparkles, Train, Wallet } from "lucide-react";
 import { TODAY } from "@/lib/mock/ui";
+import { slugify } from "@/lib/slug";
 import { MapFrame } from "@/components/MapFrame";
 import { Eyebrow, MONO, SERIF } from "@/components/ui";
 
@@ -124,7 +125,7 @@ export default function Today() {
           {TODAY.map((t, i) => (
             <button
               key={t.title}
-              onClick={() => router.push("/place")}
+              onClick={() => router.push(`/place/${slugify(t.title)}`)}
               style={{
                 width: "100%",
                 textAlign: "left",
@@ -169,7 +170,7 @@ export default function Today() {
               You&rsquo;re 400 m from Librairie Bertrand and the rain starts in 20 minutes. Books, then
               coffee next door, keeps you $12 under today.
             </p>
-            <button onClick={() => router.push("/place")} style={{ border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 14, fontWeight: 700, padding: "12px 20px", borderRadius: 999, width: "100%", maxWidth: 280, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <button onClick={() => router.push("/now")} style={{ border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 14, fontWeight: 700, padding: "12px 20px", borderRadius: 999, width: "100%", maxWidth: 280, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
               <Sparkles size={16} strokeWidth={2} color="currentColor" />
               What should I do right now?
             </button>

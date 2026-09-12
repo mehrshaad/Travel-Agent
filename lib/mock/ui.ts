@@ -327,6 +327,7 @@ export interface ChatMessage {
 
 export const NAV_ITEMS = [
   { key: "today", label: "Today", href: "/today" },
+  { key: "now", label: "Now", href: "/now" },
   { key: "itinerary", label: "Itinerary", href: "/itinerary" },
   { key: "explore", label: "Explore", href: "/explore" },
   { key: "stay", label: "Stay", href: "/stay" },
