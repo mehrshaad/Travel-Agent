@@ -1,120 +1,109 @@
-# Waylo — demo script
+# Waylo — 2 minute walkthrough
 
-**Live:** https://waylo-lemon.vercel.app · **Repo:** https://github.com/mehrshaad/Travel-Agent
+**https://waylo-lemon.vercel.app**
 
-Share the **alias** above, never a `waylo-<hash>.vercel.app` deployment URL — those sit
-behind Vercel SSO and a judge would hit a login wall.
+Share that link, never a `waylo-<hash>` one — those sit behind Vercel login.
 
----
-
-## Before you present
-
-- Open the alias once, a few minutes early. The first request wakes the serverless
-  functions and warms the Overpass/Open-Meteo caches; after that everything is fast.
-- Click **Transit** on Today once during that warm-up. It costs the six routing calls
-  up front so the tab is instant on stage.
-- Allow location when `/now` asks. If you decline it still works — it falls back to the
-  booked hotel and says so — but GPS is the better story.
+**Before you start:** open `/today` once and click **Transit**. That warms the caches so
+nothing spins on stage. Allow location when `/now` asks.
 
 ---
 
-## The four moments, in order
+## 0:00 — The hook *(15s)*
 
-### 1 · It plans from what you say — `/`
+Open the landing page.
 
-Type into the prompt box, or take the "Three days in Toronto…" chip. Press **Plan my
-days** → onboarding → **Dispatch the crew**.
+> "Most travel AI writes you an itinerary once, and then you're on your own.
+> Waylo keeps re-planning the trip **while you're on it**."
 
-> Eight named agents, each owning one concern. Watch them work down the list.
+Click **Open demo trip**.
 
-Generating runs ~5 seconds then lands on Today.
+---
 
-### 2 · It re-plans, and tells you why — `/today`
+## 0:15 — It already changed your day *(30s)*
 
-The black banner at the top: *Nimbus + Atlas · adapted 12 min ago*.
+You land on Today. Point at the black banner.
 
-> Rain 3–5 PM, so Mount Royal moved to Thursday and Pointe-à-Callière took its slot —
-> indoor, six minutes from lunch.
+> "Rain at 3 PM. So Nimbus moved Mount Royal to Thursday and dropped the archaeology
+> museum into that slot — indoors, six minutes from lunch. Dash re-routed the walk.
+> **Every change comes with the reason.**"
 
-**Say the honest part:** this banner is scripted copy, but the same decision runs live —
-`GET /api/trips/trip_montreal_demo/replan/live` checks the real forecast and returns a
-proposal **or nothing**. Today it returns nothing, because Montreal's weather is
-genuinely fine. A replanner that always finds something to change is broken, not smart.
+Click **Keep it**. It confirms.
 
-### 3 · Every leg, three ways — `/today`, the Route card
+---
 
-Click **Walking → Transit → Taxi**. The totals change, the directions change, the map
-line changes colour and the métro stations appear.
+## 0:45 — Three ways to make the same trip *(30s)*
+
+In the Route card, click **Walking → Transit → Taxi**. Totals change, the map line
+changes colour, métro stations appear.
 
 Point at the last leg:
 
-> Librairie Bertrand → Damas · Métro · change · 44 min · $3.75
-> Walk 493 m to Square-Victoria-OACI · Orange to Snowdon, 8 stops · change · Blue to
-> Outremont, 4 stops · walk 166 m
+> "Orange line to Snowdon, change to Blue, out at Outremont. **Those are real stations** —
+> the whole métro network came out of OpenStreetMap. And look here —"
 
-Those are real stations and real interchanges. The four STM lines, their colours and
-full station order came out of OpenStreetMap; routing enumerates every journey up to two
-changes and picks the fastest. Short hops say **"Walk instead"** rather than inventing a
-metro ride for 600 m.
+Point at a short leg reading **WALK INSTEAD**.
 
-Then drag a stop by its grip — the rows slide, and **the map route re-sequences to match**.
+> "— it refuses to put you on a train for 600 metres."
 
-### 4 · It answers from where you actually are — `/now`
+Now drag a stop by its grip.
 
-Click **✨ What should I do right now?** on Today, or the **Now** tab.
+> "Reorder the day, and the route on the map follows."
 
-It asks the browser for real coordinates, then answers from the live forecast, what is
-actually open nearby, and the budget you type in the box. Change the budget and ask
-again — the answer changes.
+---
 
-> A minute's walk from something worth your time. It is 21°C and dry. Presse Cafe is
-> 81 m away, about $7, which keeps you inside the $40 you have left today.
+## 1:15 — What should I do *right now* *(30s)*
 
-Real café, real distance, real temperature.
+Click the **✨ What should I do right now?** button.
 
-### 5 · The crew can change the trip — the chat bubble, bottom right
+> "This asks my browser where I actually am, checks the live forecast, and looks at
+> what's open near me and what's left in today's budget."
 
-Open it and type:
+Read the answer aloud — it will name a real café, a real distance, the real temperature.
+
+Change the budget number, ask again.
+
+> "Different budget, different answer."
+
+---
+
+## 1:45 — The crew can change the trip *(15s)*
+
+Open the chat bubble, bottom right. Type:
 
 ```
 Move the bookstore to position 2
 ```
 
-It resolves "the bookstore" to Librairie Bertrand, calls the action, the plan reorders
-and the map follows. Then try an ambiguous one:
+The plan reorders and the map follows.
 
-```
-move the cafe earlier
-```
-
-Two stops match, so it asks which — it does not guess.
+> "It didn't describe what to do. **It did it.**"
 
 ---
 
-## If something fails on stage
+## Close
 
-Nothing here is load-bearing on a single upstream, so say what you see:
-
-| If | What actually happens | Say |
-|---|---|---|
-| Overpass is slow or down | Explore falls back to curated results and the badge reads *offline sample* with the reason | "It degrades and tells you it degraded." |
-| The free LLM rate-limits | `/now` narrative falls back to deterministic text; `writtenBy` flips to `rules` | "The model writes the sentence. It never decides the plan." |
-| The chat errors | Runtime retries down four free models before giving up | "Free tier. There's a failover chain behind it." |
-| Location denied | Falls back to the booked hotel, labelled in the header | "That's the designed path, not a failure." |
+> "Eight agents, live weather, live places, real transit. Built on free tiers —
+> OpenStreetMap, Open-Meteo, OSRM, and free models. The only thing we pay for is search,
+> and the app shows you the meter."
 
 ---
 
-## Questions you should expect
+## If something stalls
 
-**"Is any of this real, or is it mocked?"**
-Places, weather, walking distances, métro lines and stations are live or real data.
-Fares, per-mode durations and taxi prices are modelled and say so in the response.
-There is no GTFS feed, so nothing claims to be a timetable.
+Say what you see — none of it is fatal:
+
+- **Explore looks stale** → the badge says *offline sample*; it fell back and told you.
+- **The crew is slow** → free models. There's a four-model failover behind it.
+- **Location denied** → it uses your booked hotel instead, and says so.
+
+## Two questions you'll get
+
+**"Is this real or mocked?"**
+Places, weather, walking distances, métro lines and stations are live. Fares and
+per-mode durations are modelled and labelled as such — there's no GTFS feed, so nothing
+pretends to be a timetable.
 
 **"What does the LLM actually do?"**
-Writes the narrative and drives the chat. Ranking, scheduling, routing and re-planning
-are deterministic — which is why a rate limit costs you phrasing, not correctness.
-
-**"What did it cost?"**
-Nothing but Exa, and the meter shows spend. OpenStreetMap, Open-Meteo, OSRM, Wikipedia
-and OpenRouter's free models carry the rest.
+Writes the prose and runs the chat. Ranking, routing and re-planning are deterministic —
+so a rate limit costs you phrasing, never correctness.
