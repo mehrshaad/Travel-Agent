@@ -4,21 +4,48 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core";
-import { CalendarDays, Check, ChevronDown, ChevronUp, Clock, CloudRain, Eye, Footprints, GripVertical, Sparkles, Train, Wallet } from "lucide-react";
+import { CalendarDays, Car, Check, ChevronDown, ChevronUp, Clock, CloudRain, Eye, Footprints, GripVertical, Sparkles, Train, Wallet } from "lucide-react";
 import { TODAY } from "@/lib/mock/ui";
 import { slugify } from "@/lib/slug";
-import type { TransitPlan } from "@/lib/transit";
-import type { TransportOption } from "@/types";
 
 /** Day 2 runs Mile End to Old Montreal — the same ends the map draws. */
 const DAY_START = { lat: 45.52355, lng: -73.60148 };
 const DAY_END = { lat: 45.52030, lng: -73.61280 };
 
-interface TransportPlan {
-  options: (TransportOption & { label: string })[];
-  transit: TransitPlan;
-  network: { operator: string; source: string };
+type Mode = "walk" | "transit" | "taxi";
+
+interface LegRow {
+  badge: string;
+  kind: "walk" | "orange" | "blue" | "taxi";
+  detail: string;
+  time: string;
+  cost: string;
 }
+interface Leg {
+  leg: string;
+  metres: number;
+  walk: LegRow;
+  transit: LegRow;
+  taxi: LegRow;
+}
+interface LegsResponse {
+  legs: Leg[];
+  totals: Record<Mode, { onFoot: string; moving: string; fares: string }>;
+}
+
+/** Badge palette, from the design. */
+const BADGES: Record<LegRow["kind"], { bg: string; fg: string; color: string }> = {
+  walk: { bg: "#F1EADF", fg: "#3A352B", color: "#B9A27A" },
+  orange: { bg: "#FDEEDA", fg: "#8A5300", color: "#F08C00" },
+  blue: { bg: "#E6EEFB", fg: "#24457F", color: "#3B6FD4" },
+  taxi: { bg: "#FDEDEA", fg: "#A83A22", color: "#E0603C" },
+};
+
+const MODE_NOTE: Record<Mode, string> = {
+  walk: "Every leg on foot. Honest about what that costs you in time.",
+  transit: "STM single fares. Lines, stations and interchanges from OpenStreetMap.",
+  taxi: "Fares modelled from road distance — not live quotes.",
+};
 import { MapFrame } from "@/components/MapFrame";
 import { Eyebrow, MONO, SERIF } from "@/components/ui";
 
@@ -42,8 +69,8 @@ export default function Today() {
   // the stops move between them, which is what dragging an itinerary should mean.
   const [order, setOrder] = useState<number[]>(() => TODAY.map((_, i) => i));
   const [dragging, setDragging] = useState<number | null>(null);
-  const [mode, setMode] = useState<"walk" | "transit">("walk");
-  const [plan, setPlan] = useState<TransportPlan | null>(null);
+  const [mode, setMode] = useState<Mode>("transit");
+  const [plan, setPlan] = useState<LegsResponse | null>(null);
   const [planning, setPlanning] = useState(false);
   const [over, setOver] = useState<number | null>(null);
 
@@ -97,14 +124,30 @@ export default function Today() {
     move(pos, to);
   }
 
-  // Real routing between the day's first and last stop. Fetched once, the first time
-  // the traveller asks for transit, so we do not spend an upstream call nobody looked at.
-  //
-  // `planning` is deliberately NOT a dependency: including it re-ran the effect the moment
-  // it flipped, and the cleanup then aborted the very request that had just started —
-  // an endless loop of self-cancelled fetches that never resolved. A ref tracks in-flight
-  // state without touching the dependency array.
+  // Every leg of the day, costed three ways, fetched once. Switching modes is then
+  // instant and spends no upstream calls.
   const planRequested = useRef(false);
+
+  useEffect(() => {
+    if (planRequested.current) return;
+    planRequested.current = true;
+    setPlanning(true);
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 25000);
+
+    fetch("/api/trips/trip_montreal_demo/legs", { signal: controller.signal })
+      .then((r) => r.json())
+      .then((b) => setPlan(b?.ok ? (b.data as LegsResponse) : null))
+      .catch(() => {
+        planRequested.current = false;
+        setPlan(null);
+      })
+      .finally(() => {
+        clearTimeout(timer);
+        setPlanning(false);
+      });
+  }, []);
 
   /**
    * A drag that never fires dragend — cancelled with Escape, dropped outside the list,
@@ -125,33 +168,6 @@ export default function Today() {
       window.removeEventListener("mouseup", clear);
     };
   }, []);
-
-  useEffect(() => {
-    if (mode !== "transit" || planRequested.current) return;
-    planRequested.current = true;
-    setPlanning(true);
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 20000);
-
-    fetch("/api/transport/plan", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({ from: DAY_START, to: DAY_END }),
-    })
-      .then((r) => r.json())
-      .then((b) => setPlan(b?.ok ? (b.data as TransportPlan) : null))
-      .catch(() => {
-        // Let the traveller retry by switching modes again.
-        planRequested.current = false;
-        setPlan(null);
-      })
-      .finally(() => {
-        clearTimeout(timer);
-        setPlanning(false);
-      });
-  }, [mode]);
 
   // --- CopilotKit: let the crew see the day and actually change it -------------
 
@@ -358,6 +374,7 @@ export default function Today() {
               {([
                 ["walk", "Walking", Footprints],
                 ["transit", "Transit", Train],
+                ["taxi", "Taxi", Car],
               ] as const).map(([key, label, Icon]) => {
                 const on = mode === key;
                 return (
@@ -369,13 +386,13 @@ export default function Today() {
                       display: "inline-flex",
                       alignItems: "center",
                       gap: 6,
-                      padding: "6px 11px",
+                      padding: "7px 13px",
                       borderRadius: 999,
-                      background: on ? "var(--wl-sand-bg)" : "#FFF",
-                      border: on ? "1px solid transparent" : "1px solid var(--wl-line)",
+                      border: `1px solid ${on ? "#17150F" : "var(--wl-line)"}`,
+                      background: on ? "#17150F" : "#FFFFFF",
                       fontSize: 12,
                       fontWeight: 700,
-                      color: on ? "var(--wl-ink-2)" : "var(--wl-muted)",
+                      color: on ? "#FBF8F3" : "var(--wl-muted)",
                     }}
                   >
                     <Icon size={16} strokeWidth={2} color="currentColor" />
@@ -388,85 +405,80 @@ export default function Today() {
           <div style={{ position: "relative", height: "clamp(300px,38vw,420px)", background: "#EFEAE1" }}>
             <MapFrame query={`day=2&order=${order.join(",")}`} title="Day 2 route through Montreal — real map" />
           </div>
-          <div style={{ padding: "14px 18px", borderTop: "1px solid #F3EDE3" }}>
-            {mode === "walk" ? (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                {[
-                  ["Walk", "3.4 km", "var(--wl-ink)"],
-                  ["Transit", "$3.35", "var(--wl-ink)"],
-                  ["Uber saved", "$19", "#1FA39A"],
-                ].map(([label, value, color]) => (
-                  <div key={label} style={{ flex: "1 1 90px" }}>
-                    <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--wl-muted)" }}>
-                      {label}
-                    </div>
-                    <div style={{ fontWeight: 800, color }}>{value}</div>
-                  </div>
-                ))}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, padding: "14px 18px", borderTop: "1px solid #F3EDE3", background: "var(--wl-bg)" }}>
+            {(plan
+              ? ([
+                  ["On foot", plan.totals[mode].onFoot, "var(--wl-ink)"],
+                  ["Moving time", plan.totals[mode].moving, "var(--wl-ink)"],
+                  ["Fares", plan.totals[mode].fares, mode === "taxi" ? "#A83A22" : "#0F6F68"],
+                  ["Legs", String(plan.legs.length), "var(--wl-ink)"],
+                ] as const)
+              : ([["On foot", "—", "var(--wl-ink)"], ["Moving time", "—", "var(--wl-ink)"], ["Fares", "—", "var(--wl-ink)"], ["Legs", "—", "var(--wl-ink)"]] as const)
+            ).map(([label, value, color]) => (
+              <div key={label} style={{ flex: "1 1 84px" }}>
+                <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--wl-muted)" }}>
+                  {label}
+                </div>
+                <div style={{ fontWeight: 800, color }}>{value}</div>
               </div>
-            ) : planning ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--wl-muted)", fontSize: 13.5 }}>
+            ))}
+          </div>
+
+          <div style={{ padding: "2px 18px 16px" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "baseline", justifyContent: "space-between", padding: "14px 0 4px" }}>
+              <Eyebrow>
+                Directions ·{" "}
+                {mode === "walk" ? "walking only" : mode === "transit" ? "STM transit" : "taxi / rideshare"}
+              </Eyebrow>
+              <span style={{ fontSize: 12.5, color: "var(--wl-muted)" }}>{MODE_NOTE[mode]}</span>
+            </div>
+
+            {planning && !plan && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--wl-muted)", fontSize: 13.5, padding: "12px 0" }}>
                 <span style={{ width: 14, height: 14, borderRadius: "50%", border: "2px solid #EDE5D8", borderTopColor: "#E0603C", animation: "wl-spin .9s linear infinite" }} />
-                Dash is costing the metro against walking…
-              </div>
-            ) : plan ? (
-              <div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-                  {plan.options.map((o) => (
-                    <span
-                      key={o.mode}
-                      title={o.note}
-                      style={{
-                        display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 11px", borderRadius: 999,
-                        background: o.mode === "transit" ? "var(--wl-ink)" : "var(--wl-sand-bg)",
-                        color: o.mode === "transit" ? "var(--wl-bg)" : "var(--wl-muted)",
-                        fontSize: 11.5, fontWeight: 700, opacity: o.available ? 1 : 0.5,
-                      }}
-                    >
-                      {o.label} · {o.durationMinutes} min · {o.cost.amount ? `$${o.cost.amount}` : "free"}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Step by step, the way a transit app shows it. */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                  {plan.transit.legs.map((leg, i) => (
-                    <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "7px 0" }}>
-                      <span
-                        style={{
-                          flex: "0 0 auto", marginTop: 3, width: 10, height: 10, borderRadius: 3,
-                          background: leg.line?.colour ?? (leg.kind === "walk" ? "#DDD3C2" : "var(--wl-muted)"),
-                        }}
-                      />
-                      <div style={{ flex: "1 1 auto", minWidth: 0 }}>
-                        <div style={{ fontSize: 13.5, fontWeight: 700 }}>
-                          {leg.text}
-                          {leg.line?.towards && (
-                            <span style={{ fontWeight: 600, color: "var(--wl-muted)" }}> · towards {leg.line.towards}</span>
-                          )}
-                        </div>
-                        {leg.through && leg.through.length > 2 && (
-                          <div style={{ fontSize: 12, color: "var(--wl-muted)", marginTop: 2 }}>
-                            {leg.stops} stops · {leg.through.slice(1, -1).join(" · ")}
-                          </div>
-                        )}
-                      </div>
-                      <span style={{ flex: "0 0 auto", fontFamily: MONO, fontSize: 11.5, color: "var(--wl-muted)" }}>
-                        {leg.minutes} min
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                <div style={{ fontSize: 11.5, color: "var(--wl-muted)", marginTop: 10 }}>
-                  {plan.transit.note} Lines and stations from {plan.network.source}.
-                </div>
-              </div>
-            ) : (
-              <div style={{ fontSize: 13.5, color: "var(--wl-muted)" }}>
-                Could not reach the routing service. Walking figures above still apply.
+                Dash is costing every leg three ways…
               </div>
             )}
+
+            {!planning && !plan && (
+              <div style={{ fontSize: 13.5, color: "var(--wl-muted)", padding: "12px 0" }}>
+                Could not reach the routing service. The plan above is unaffected.
+              </div>
+            )}
+
+            {plan?.legs.map((l) => {
+              const row = l[mode];
+              const badge = BADGES[row.kind];
+              // What the other two modes would cost, skipping duplicates — the design's
+              // "Also:" line, so each leg shows the trade-off rather than one answer.
+              const others = (["walk", "transit", "taxi"] as Mode[])
+                .filter((k) => k !== mode)
+                .map((k) => l[k])
+                .filter((o) => !(o.time === row.time && o.cost === row.cost))
+                .map((o) => `${o.badge.replace("Walk instead", "Walk")} ${o.time} · ${o.cost}`);
+
+              return (
+                <div key={l.leg} style={{ display: "flex", gap: 12, alignItems: "stretch", padding: "13px 0", borderTop: "1px solid #F3EDE3" }}>
+                  <span style={{ flex: "0 0 4px", borderRadius: 3, background: badge.color }} />
+                  <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 5 }}>
+                      <span style={{ padding: "4px 10px", borderRadius: 8, fontFamily: MONO, fontSize: 10.5, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 700, background: badge.bg, color: badge.fg }}>
+                        {row.badge}
+                      </span>
+                      <span style={{ fontSize: 14.5, fontWeight: 700 }}>{l.leg}</span>
+                    </div>
+                    <div style={{ fontSize: 13, color: "var(--wl-ink-2)" }}>{row.detail}</div>
+                    <div style={{ fontSize: 12.5, color: "var(--wl-muted)", marginTop: 4 }}>
+                      {others.length ? `Also: ${others.join("  ·  ")}` : "No faster option exists for this leg."}
+                    </div>
+                  </div>
+                  <div style={{ flex: "0 0 auto", textAlign: "right" }}>
+                    <div style={{ fontSize: 14, fontWeight: 800 }}>{row.time}</div>
+                    <div style={{ fontFamily: MONO, fontSize: 12, color: "var(--wl-muted)", marginTop: 2 }}>{row.cost}</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
