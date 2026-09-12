@@ -77,6 +77,31 @@ export default function Today() {
     },
   });
 
+  /**
+   * Guardrail for every action that names a stop. An agent that guesses when a name is
+   * ambiguous will confidently move the wrong thing, so ambiguity is refused out loud.
+   */
+  function resolveStop(raw: unknown): { ok: true; pos: number } | { ok: false; message: string } {
+    const q = String(raw ?? "").trim().toLowerCase();
+    if (q.length < 2) return { ok: false, message: "Tell me which stop you mean." };
+    if (q.length > 80) return { ok: false, message: "That does not look like a stop name." };
+
+    const hits = order
+      .map((idx, pos) => ({ pos, title: TODAY[idx].title }))
+      .filter((r) => r.title.toLowerCase().includes(q));
+
+    if (hits.length === 0) {
+      return {
+        ok: false,
+        message: `There is no "${raw}" in today's plan. It has: ${order.map((i) => TODAY[i].title).join(", ")}.`,
+      };
+    }
+    if (hits.length > 1) {
+      return { ok: false, message: `That matches ${hits.map((h) => h.title).join(" and ")}. Which one?` };
+    }
+    return { ok: true, pos: hits[0].pos };
+  }
+
   useCopilotAction({
     name: "reorderPlan",
     description:
@@ -87,11 +112,18 @@ export default function Today() {
       { name: "toPosition", type: "number", description: "Its new 1-based position in the day." },
     ],
     handler: ({ stop, toPosition }) => {
-      const from = order.findIndex((idx) => TODAY[idx].title.toLowerCase().includes(String(stop).toLowerCase()));
-      if (from === -1) return `There is no stop called "${stop}" in today's plan.`;
-      const to = Math.max(0, Math.min(order.length - 1, Math.round(toPosition) - 1));
-      move(from, to);
-      return `Moved ${TODAY[order[from]].title} to position ${to + 1}. The map route updated to match.`;
+      const found = resolveStop(stop);
+      if (!found.ok) return found.message;
+
+      const wanted = Number(toPosition);
+      if (!Number.isFinite(wanted)) return "Give me a position number between 1 and " + order.length + ".";
+      const to = Math.max(0, Math.min(order.length - 1, Math.round(wanted) - 1));
+
+      const name = TODAY[order[found.pos]].title;
+      if (to === found.pos) return `${name} is already at position ${to + 1}.`;
+
+      move(found.pos, to);
+      return `Moved ${name} to position ${to + 1}. The map route updated to match.`;
     },
   });
 
@@ -104,13 +136,21 @@ export default function Today() {
       { name: "budgetRemaining", type: "number", description: "Dollars left to spend today.", required: false },
     ],
     handler: async ({ budgetRemaining }) => {
+      // Clamp rather than trust: a model can pass anything, including a negative
+      // budget or a number big enough to make every option "affordable".
+      const raw = Number(budgetRemaining);
+      const remaining = Number.isFinite(raw) ? Math.max(0, Math.min(5000, Math.round(raw))) : 86;
+
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 20000);
       try {
         const res = await fetch("/api/trips/trip_montreal_demo/now", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
           body: JSON.stringify({
             location: { lat: 45.5017, lng: -73.5673 },
-            remaining: budgetRemaining ?? 86,
+            remaining,
           }),
         });
         const body = await res.json();
@@ -120,8 +160,20 @@ export default function Today() {
           .map((o: { place: { name: string }; distanceMeters?: number }) => `${o.place.name} (${o.distanceMeters}m)`)
           .join(", ")}`;
       } catch {
-        return "The crew could not reach live data just now.";
+        return "The crew could not reach live data just now — try again in a moment.";
+      } finally {
+        clearTimeout(timer);
       }
+    },
+  });
+
+  useCopilotAction({
+    name: "resetPlan",
+    description: "Put today's plan back into its original order.",
+    parameters: [],
+    handler: () => {
+      setOrder(TODAY.map((_, i) => i));
+      return "Today is back in its original order.";
     },
   });
 
@@ -130,8 +182,9 @@ export default function Today() {
     description: "Open the detail page for a stop in the plan so the traveller can see it.",
     parameters: [{ name: "stop", type: "string", description: "The name of the stop to open." }],
     handler: ({ stop }) => {
-      const hit = TODAY.find((t) => t.title.toLowerCase().includes(String(stop).toLowerCase()));
-      if (!hit) return `There is no stop called "${stop}" today.`;
+      const found = resolveStop(stop);
+      if (!found.ok) return found.message;
+      const hit = TODAY[order[found.pos]];
       router.push(`/place/${slugify(hit.title)}`);
       return `Opening ${hit.title}.`;
     },

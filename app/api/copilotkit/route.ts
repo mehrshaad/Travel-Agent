@@ -22,8 +22,19 @@ export const dynamic = "force-dynamic";
  */
 const MODEL = "inclusionai/ling-3.0-flash-vl:free";
 
+/** Refuse absurd payloads before they reach a metered model. */
+const MAX_BODY_BYTES = 128 * 1024;
+
 export const POST = async (req: Request) => {
   const apiKey = process.env.OPENROUTER_API_KEY;
+
+  const declared = Number(req.headers.get("content-length") ?? 0);
+  if (declared > MAX_BODY_BYTES) {
+    return Response.json(
+      { error: "payload_too_large", message: "That message is too long for the crew." },
+      { status: 413 },
+    );
+  }
 
   if (!apiKey) {
     return Response.json(
