@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core";
 import { CalendarDays, Check, ChevronDown, ChevronUp, Clock, CloudRain, Eye, Footprints, GripVertical, Sparkles, Train, Wallet } from "lucide-react";
 import { TODAY } from "@/lib/mock/ui";
 import { slugify } from "@/lib/slug";
@@ -47,6 +48,94 @@ export default function Today() {
     if (to < 0 || to >= order.length) return;
     move(pos, to);
   }
+
+  // --- CopilotKit: let the crew see the day and actually change it -------------
+
+  useCopilotReadable({
+    description:
+      "The traveller's plan for today in Montreal, in order. Position 1 happens first. " +
+      "Each entry lists the time slot, the stop, why it was chosen and its cost.",
+    value: order.map((idx, pos) => ({
+      position: pos + 1,
+      time: TODAY[pos].time,
+      stop: TODAY[idx].title,
+      kind: TODAY[idx].meta,
+      why: TODAY[idx].why,
+      cost: TODAY[idx].cost,
+      indoor: !TODAY[idx].title.toLowerCase().includes("walk"),
+    })),
+  });
+
+  useCopilotReadable({
+    description: "Today's conditions and budget for the traveller.",
+    value: {
+      city: "Montreal",
+      date: "Tuesday, Sep 16",
+      weather: "21°C, rain expected 3-5 PM",
+      spentToday: "$64 of $150",
+      walkedToday: "3.4 km of 6 km",
+    },
+  });
+
+  useCopilotAction({
+    name: "reorderPlan",
+    description:
+      "Move one stop in today's plan to a different position. Use this whenever the traveller " +
+      "asks to do something earlier, later, first or last. Positions are 1-based.",
+    parameters: [
+      { name: "stop", type: "string", description: "The name of the stop to move, as shown in the plan." },
+      { name: "toPosition", type: "number", description: "Its new 1-based position in the day." },
+    ],
+    handler: ({ stop, toPosition }) => {
+      const from = order.findIndex((idx) => TODAY[idx].title.toLowerCase().includes(String(stop).toLowerCase()));
+      if (from === -1) return `There is no stop called "${stop}" in today's plan.`;
+      const to = Math.max(0, Math.min(order.length - 1, Math.round(toPosition) - 1));
+      move(from, to);
+      return `Moved ${TODAY[order[from]].title} to position ${to + 1}. The map route updated to match.`;
+    },
+  });
+
+  useCopilotAction({
+    name: "whatShouldIDoNow",
+    description:
+      "Ask the live crew what to do right now, using real weather and places near the traveller. " +
+      "Use this for open-ended 'what now' questions rather than guessing.",
+    parameters: [
+      { name: "budgetRemaining", type: "number", description: "Dollars left to spend today.", required: false },
+    ],
+    handler: async ({ budgetRemaining }) => {
+      try {
+        const res = await fetch("/api/trips/trip_montreal_demo/now", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: { lat: 45.5017, lng: -73.5673 },
+            remaining: budgetRemaining ?? 86,
+          }),
+        });
+        const body = await res.json();
+        if (!body?.ok) return "The crew could not reach live data just now.";
+        const n = body.data;
+        return `${n.headline} ${n.narrative} Options: ${n.options
+          .map((o: { place: { name: string }; distanceMeters?: number }) => `${o.place.name} (${o.distanceMeters}m)`)
+          .join(", ")}`;
+      } catch {
+        return "The crew could not reach live data just now.";
+      }
+    },
+  });
+
+  useCopilotAction({
+    name: "openPlace",
+    description: "Open the detail page for a stop in the plan so the traveller can see it.",
+    parameters: [{ name: "stop", type: "string", description: "The name of the stop to open." }],
+    handler: ({ stop }) => {
+      const hit = TODAY.find((t) => t.title.toLowerCase().includes(String(stop).toLowerCase()));
+      if (!hit) return `There is no stop called "${stop}" today.`;
+      router.push(`/place/${slugify(hit.title)}`);
+      return `Opening ${hit.title}.`;
+    },
+  });
 
   return (
     <div style={{ animation: "wl-screen .46s cubic-bezier(.22,.68,.16,1) both", maxWidth: 1360, margin: "0 auto" }}>

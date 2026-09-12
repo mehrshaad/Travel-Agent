@@ -4,15 +4,27 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/mock/ui";
+import { useEffect, useState } from "react";
+import { CopilotKit } from "@copilotkit/react-core";
+import { CopilotSidebar } from "@copilotkit/react-ui";
+import "@copilotkit/react-ui/styles.css";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
+  // CopilotKit 1.71 calls new URL(runtimeUrl) with no base, so a relative path throws
+  // "Invalid URL" — and it also refuses to render without one, so it cannot simply be
+  // deferred. The server gets a syntactically valid placeholder it never fetches with;
+  // the browser swaps in its real origin on mount, before any request is made.
+  const [runtimeUrl, setRuntimeUrl] = useState("http://localhost/api/copilotkit");
+  useEffect(() => setRuntimeUrl(`${window.location.origin}/api/copilotkit`), []);
+
   /** Place detail is reached from Today, so Today stays lit while you're on it. */
   const activeKey = pathname.startsWith("/place") ? "today" : pathname.slice(1);
 
   return (
+    <CopilotKit runtimeUrl={runtimeUrl}>
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <header
         style={{
@@ -125,6 +137,29 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <main style={{ flex: 1, padding: "clamp(18px,3vw,34px) clamp(16px,3vw,34px) 64px" }}>{children}</main>
+
+      {/* The crew, reachable from any screen. It can read the trip and act on it —
+          see the useCopilotAction calls in the Today screen. */}
+      <CopilotSidebar
+        labels={{
+          title: "Ask the crew",
+          initial:
+            "I can see your plan, the forecast and what you have left to spend. Try: " +
+            "\"move the bookstore before lunch\", \"what should I do right now?\", or " +
+            "\"I only have $20 left\".",
+        }}
+        instructions={
+          "You are Waylo's travel crew: Atlas orchestrates, Nimbus watches weather, Morsel handles food, " +
+          "Dash handles transport, Echo learns preferences. You are helping someone mid-trip in Montreal. " +
+          "Use the provided readable context for the plan, budget and weather. When the traveller asks to " +
+          "change the day, CALL THE ACTIONS rather than describing what they should do. Never invent a " +
+          "place, price or opening time that is not in the context or returned by an action. Keep replies " +
+          "to two or three sentences."
+        }
+        defaultOpen={false}
+        clickOutsideToClose
+      />
     </div>
+    </CopilotKit>
   );
 }
