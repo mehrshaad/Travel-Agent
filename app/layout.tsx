@@ -5,7 +5,6 @@ export const metadata: Metadata = {
   title: "Waylo — travel that adapts to you",
   description:
     "A crew of agents builds your trip, then keeps re-planning as the weather, your budget and your mood change mid-trip.",
-  icons: { icon: "/icon.png", apple: "/icon.png" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
