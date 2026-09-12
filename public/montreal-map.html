@@ -62,6 +62,20 @@
 
   var q = new URLSearchParams(location.search);
   var stops = q.get('place') ? (PLACES[q.get('place')] || PLACES.bertrand) : (DAYS[q.get('day')] || DAYS[2]);
+
+  // ?order=3,0,1,2 re-sequences the stops so the route line and the pin numbers
+  // match the order the traveller dragged the plan into.
+  var order = q.get('order');
+  if (order && !q.get('place')) {
+    var idx = order.split(',').map(Number).filter(function (n) {
+      return Number.isInteger(n) && n >= 0 && n < stops.length;
+    });
+    var seen = {};
+    var unique = idx.filter(function (n) { return seen[n] ? false : (seen[n] = true); });
+    if (unique.length === stops.length) {
+      stops = unique.map(function (n) { return stops[n]; });
+    }
+  }
   var single = stops.length === 1;
 
   var map = L.map('map', { zoomControl: !q.get('static'), scrollWheelZoom: false, dragging: !q.get('static') });

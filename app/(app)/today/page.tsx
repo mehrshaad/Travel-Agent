@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Check, Clock, CloudRain, Eye, Footprints, Sparkles, Train, Wallet } from "lucide-react";
+import { useState } from "react";
+import { CalendarDays, Check, ChevronDown, ChevronUp, Clock, CloudRain, Eye, Footprints, GripVertical, Sparkles, Train, Wallet } from "lucide-react";
 import { TODAY } from "@/lib/mock/ui";
 import { slugify } from "@/lib/slug";
 import { MapFrame } from "@/components/MapFrame";
@@ -23,6 +24,29 @@ const CARD: React.CSSProperties = {
 
 export default function Today() {
   const router = useRouter();
+
+  // The plan is an ORDER over TODAY, not a copy of it: the time slots stay put and
+  // the stops move between them, which is what dragging an itinerary should mean.
+  const [order, setOrder] = useState<number[]>(() => TODAY.map((_, i) => i));
+  const [dragging, setDragging] = useState<number | null>(null);
+  const [over, setOver] = useState<number | null>(null);
+
+  function move(from: number, to: number) {
+    if (from === to) return;
+    setOrder((cur) => {
+      const next = [...cur];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  }
+
+  /** Keyboard equivalent, so reordering is not mouse-only. */
+  function nudge(pos: number, delta: number) {
+    const to = pos + delta;
+    if (to < 0 || to >= order.length) return;
+    move(pos, to);
+  }
 
   return (
     <div style={{ animation: "wl-screen .46s cubic-bezier(.22,.68,.16,1) both", maxWidth: 1360, margin: "0 auto" }}>
@@ -96,7 +120,7 @@ export default function Today() {
             </div>
           </div>
           <div style={{ position: "relative", height: "clamp(300px,38vw,420px)", background: "#EFEAE1" }}>
-            <MapFrame query="day=2" title="Day 2 route through Montreal — real map" />
+            <MapFrame query={`day=2&order=${order.join(",")}`} title="Day 2 route through Montreal — real map" />
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, padding: "14px 18px", borderTop: "1px solid #F3EDE3" }}>
             {[
@@ -122,44 +146,114 @@ export default function Today() {
             </Link>
           </div>
 
-          {TODAY.map((t, i) => (
-            <button
-              key={t.title}
-              onClick={() => router.push(`/place/${slugify(t.title)}`)}
-              style={{
-                width: "100%",
-                textAlign: "left",
-                display: "flex",
-                gap: 14,
-                alignItems: "flex-start",
-                border: 0,
-                background: "transparent",
-                padding: "13px 8px",
-                borderRadius: 16,
-                borderBottom: "1px solid #F3EDE3",
-                animation: "wl-row .5s ease both",
-                animationDelay: `${i * 55}ms`,
-              }}
-            >
-              <div style={{ flex: "0 0 52px", fontFamily: MONO, fontSize: 12.5, fontWeight: 500, color: "var(--wl-muted)", paddingTop: 2 }}>
-                {t.time}
-              </div>
-              <div style={{ flex: "0 0 auto", width: 10, height: 10, borderRadius: "50%", marginTop: 6, background: t.color }} />
-              <div style={{ flex: "1 1 auto", minWidth: 0 }}>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "baseline" }}>
-                  <span style={{ fontSize: 15.5, fontWeight: 700 }}>{t.title}</span>
-                  <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--wl-muted)" }}>{t.meta}</span>
+          {order.map((idx, i) => {
+            const t = TODAY[idx];
+            const slot = TODAY[i]; // the time slot belongs to the position, not the stop
+            const isDragging = dragging === i;
+            const isTarget = over === i && dragging !== null && dragging !== i;
+
+            return (
+              <div
+                key={t.title}
+                draggable
+                onDragStart={(e) => {
+                  setDragging(i);
+                  e.dataTransfer.effectAllowed = "move";
+                  // Firefox refuses to start a drag without data set.
+                  e.dataTransfer.setData("text/plain", String(i));
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  if (over !== i) setOver(i);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (dragging !== null) move(dragging, i);
+                  setDragging(null);
+                  setOver(null);
+                }}
+                onDragEnd={() => {
+                  setDragging(null);
+                  setOver(null);
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 4,
+                  borderRadius: 16,
+                  borderBottom: "1px solid #F3EDE3",
+                  background: isTarget ? "#F7F3EC" : "transparent",
+                  boxShadow: isTarget ? "inset 0 2px 0 var(--wl-accent)" : "none",
+                  opacity: isDragging ? 0.45 : 1,
+                  transition: "background .18s ease, opacity .18s ease, box-shadow .18s ease",
+                  animation: "wl-row .5s ease both",
+                  animationDelay: `${i * 55}ms`,
+                }}
+              >
+                <div
+                  aria-hidden
+                  title="Drag to reorder"
+                  style={{ display: "flex", alignItems: "center", alignSelf: "stretch", padding: "0 2px", color: "#C9BFAE", cursor: "grab" }}
+                >
+                  <GripVertical size={16} strokeWidth={2} color="currentColor" />
                 </div>
-                <div style={{ fontSize: 13, color: "var(--wl-muted)", marginTop: 3 }}>{t.why}</div>
-                {t.swapped && (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 7, padding: "4px 10px", borderRadius: 999, background: "#EAF4F2", color: "#0F6F68", fontSize: 11.5, fontWeight: 700 }}>
-                    Swapped in by Nimbus
-                  </span>
-                )}
+
+                <button
+                  onClick={() => router.push(`/place/${slugify(t.title)}`)}
+                  style={{
+                    flex: "1 1 auto",
+                    minWidth: 0,
+                    textAlign: "left",
+                    display: "flex",
+                    gap: 14,
+                    alignItems: "flex-start",
+                    border: 0,
+                    background: "transparent",
+                    padding: "13px 8px 13px 4px",
+                  }}
+                >
+                  <div style={{ flex: "0 0 52px", fontFamily: MONO, fontSize: 12.5, fontWeight: 500, color: "var(--wl-muted)", paddingTop: 2 }}>
+                    {slot.time}
+                  </div>
+                  <div style={{ flex: "0 0 auto", width: 10, height: 10, borderRadius: "50%", marginTop: 6, background: t.color }} />
+                  <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "baseline" }}>
+                      <span style={{ fontSize: 15.5, fontWeight: 700 }}>{t.title}</span>
+                      <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--wl-muted)" }}>{t.meta}</span>
+                    </div>
+                    <div style={{ fontSize: 13, color: "var(--wl-muted)", marginTop: 3 }}>{t.why}</div>
+                    {t.swapped && (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 7, padding: "4px 10px", borderRadius: 999, background: "#EAF4F2", color: "#0F6F68", fontSize: 11.5, fontWeight: 700 }}>
+                        Swapped in by Nimbus
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ flex: "0 0 auto", fontSize: 13.5, fontWeight: 800, color: "var(--wl-ink-2)" }}>{t.cost}</div>
+                </button>
+
+                {/* Reordering must not be mouse-only. */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 2, padding: "12px 2px 0 0" }}>
+                  <button
+                    onClick={() => nudge(i, -1)}
+                    disabled={i === 0}
+                    aria-label={`Move ${t.title} earlier`}
+                    style={{ border: 0, background: "transparent", color: i === 0 ? "#DDD3C2" : "var(--wl-muted)", padding: 2, lineHeight: 0 }}
+                  >
+                    <ChevronUp size={14} strokeWidth={2} color="currentColor" />
+                  </button>
+                  <button
+                    onClick={() => nudge(i, 1)}
+                    disabled={i === order.length - 1}
+                    aria-label={`Move ${t.title} later`}
+                    style={{ border: 0, background: "transparent", color: i === order.length - 1 ? "#DDD3C2" : "var(--wl-muted)", padding: 2, lineHeight: 0 }}
+                  >
+                    <ChevronDown size={14} strokeWidth={2} color="currentColor" />
+                  </button>
+                </div>
               </div>
-              <div style={{ flex: "0 0 auto", fontSize: 13.5, fontWeight: 800, color: "var(--wl-ink-2)" }}>{t.cost}</div>
-            </button>
-          ))}
+            );
+          })}
 
           <div style={{ marginTop: 16, borderRadius: 20, padding: 18, background: "linear-gradient(135deg,#FFE9DC,#F4EBFB)", border: "1px solid #F2E4DA" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 7, fontFamily: MONO, fontSize: 10.5, letterSpacing: ".12em", textTransform: "uppercase", color: "#8C6A55", marginBottom: 8 }}>
