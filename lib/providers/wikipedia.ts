@@ -9,6 +9,25 @@ interface WikipediaSummary {
   description?: string;
   thumbnail?: { source?: string };
   content_urls?: { desktop?: { page?: string } };
+  type?: string;
+  coordinates?: { lat: number; lon: number };
+}
+
+/**
+ * A bare name lookup collides with ordinary words: the Montreal bookstore "Indigo"
+ * resolves to Wikipedia's article on the colour, which would put a colour swatch on a
+ * bookstore card. Only trust an article that is geographic and sits near the place.
+ */
+const MAX_MATCH_METRES = 2000;
+
+function metresApart(a: { lat: number; lng: number }, b: { lat: number; lon: number }): number {
+  const R = 6371000;
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLng = rad(b.lon - a.lng);
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
 }
 
 const cacheTtlSeconds = 30 * 24 * 60 * 60;
@@ -32,8 +51,21 @@ export function createWikipediaProvider(cache: Cache): EnrichmentProvider {
         const summary = await fetchJson<WikipediaSummary>({
           url: `https://${page.language}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(page.title)}`,
           tool: "wikipedia",
+          // Wikipedia rate-limits quickly; serialise and space these out.
+          rateLimitKey: "wikipedia",
+          minIntervalMs: 250,
           ctx,
         });
+        // Trust an exact wiki link outright; otherwise demand geography that matches.
+        const linked = Boolean(place.url?.includes("wikipedia.org"));
+        if (!linked) {
+          const coords = summary.coordinates;
+          if (!coords || metresApart(place.coords, coords) > MAX_MATCH_METRES) {
+            await cache.set(cacheKey, {}, cacheTtlSeconds);
+            return {};
+          }
+        }
+
         const enrichment: Partial<Place> = {
           ...(summary.extract || summary.description
             ? { description: summary.extract ?? summary.description }

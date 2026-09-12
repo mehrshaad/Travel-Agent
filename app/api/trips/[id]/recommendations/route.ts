@@ -49,7 +49,22 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
       maxWalkMeters: 6000,
     }).slice(0, limit);
 
-    return ok(ranked, started, { usage: p.usage() });
+    // Sara's Wikipedia provider was wired into the registry but never called, so live
+    // results had no description or photo. Enrich only the top few: each miss is a
+    // round trip, and beyond the fold nobody reads them.
+    const enriched = await Promise.all(
+      ranked.map(async (r, i) => {
+        if (i >= 4) return r;
+        try {
+          const extra = await p.enrich.describe(r.place, trace());
+          return Object.keys(extra).length ? { ...r, place: { ...r.place, ...extra } } : r;
+        } catch {
+          return r;
+        }
+      }),
+    );
+
+    return ok(enriched, started, { usage: p.usage() });
   } catch {
     return ok(RECOMMENDATIONS, started);
   }
