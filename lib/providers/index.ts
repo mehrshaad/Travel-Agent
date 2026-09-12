@@ -46,15 +46,29 @@ export function envFromProcess(): ProviderEnv {
   };
 }
 
-let singleton: ProviderRegistry | null = null;
-let singletonUsage: Usage | null = null;
+/**
+ * Held on globalThis rather than in module scope: Next bundles each route handler
+ * separately, so a plain module singleton gives every route its own registry and the
+ * usage meter always reads zero. It also survives dev hot-reloads.
+ */
+const GLOBAL_KEY = "__waylo_providers__";
+
+interface Holder {
+  registry: ProviderRegistry;
+  usage: Usage;
+}
+
+function holder(): Holder {
+  const g = globalThis as unknown as Record<string, Holder | undefined>;
+  if (!g[GLOBAL_KEY]) {
+    const usage = new Usage();
+    g[GLOBAL_KEY] = { usage, registry: createProviders(envFromProcess(), usage) };
+  }
+  return g[GLOBAL_KEY]!;
+}
 
 export function providers(): ProviderRegistry {
-  if (!singleton) {
-    singletonUsage = new Usage();
-    singleton = createProviders(envFromProcess(), singletonUsage);
-  }
-  return singleton;
+  return holder().registry;
 }
 
 /**
@@ -62,10 +76,10 @@ export function providers(): ProviderRegistry {
  * the usage meter and the agent-activity panel.
  */
 export function trace(): { onToolCall: (c: ToolCall) => void } {
-  return { onToolCall: (c) => singletonUsage?.record(c) };
+  return { onToolCall: (c) => holder().usage.record(c) };
 }
 
 /** Tool calls recorded since the process started (most recent last). */
 export function recentCalls(): ToolCall[] {
-  return singletonUsage?.calls ?? [];
+  return holder().usage.calls;
 }

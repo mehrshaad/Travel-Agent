@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core";
 import { CalendarDays, Check, ChevronDown, ChevronUp, Clock, CloudRain, Eye, Footprints, GripVertical, Sparkles, Train, Wallet } from "lucide-react";
 import { TODAY } from "@/lib/mock/ui";
@@ -42,10 +42,43 @@ export default function Today() {
     });
   }
 
+  // --- FLIP: animate rows between positions ---------------------------------
+  // React moves the DOM node when the order changes, so a CSS transition alone does
+  // nothing. Measure each row before the change, then invert-and-play afterwards.
+  const rowRefs = useRef(new Map<number, HTMLDivElement>());
+  const lastRects = useRef(new Map<number, DOMRect>());
+
+  function captureRects() {
+    const rects = new Map<number, DOMRect>();
+    rowRefs.current.forEach((el, key) => rects.set(key, el.getBoundingClientRect()));
+    lastRects.current = rects;
+  }
+
+  useLayoutEffect(() => {
+    rowRefs.current.forEach((el, key) => {
+      const prev = lastRects.current.get(key);
+      if (!prev) return;
+      const next = el.getBoundingClientRect();
+      const dy = prev.top - next.top;
+      if (Math.abs(dy) < 1) return;
+
+      // Invert: jump the row back to where it was, with no transition...
+      el.style.transition = "none";
+      el.style.transform = `translateY(${dy}px)`;
+      // ...then play it forward on the next frame.
+      requestAnimationFrame(() => {
+        el.style.transition = "transform 260ms cubic-bezier(.22,.68,.16,1)";
+        el.style.transform = "";
+      });
+    });
+    captureRects();
+  }, [order]);
+
   /** Keyboard equivalent, so reordering is not mouse-only. */
   function nudge(pos: number, delta: number) {
     const to = pos + delta;
     if (to < 0 || to >= order.length) return;
+    captureRects();
     move(pos, to);
   }
 
@@ -292,11 +325,14 @@ export default function Today() {
             const t = TODAY[idx];
             const slot = TODAY[i]; // the time slot belongs to the position, not the stop
             const isDragging = dragging === i;
-            const isTarget = over === i && dragging !== null && dragging !== i;
 
             return (
               <div
                 key={t.title}
+                ref={(el) => {
+                  if (el) rowRefs.current.set(idx, el);
+                  else rowRefs.current.delete(idx);
+                }}
                 draggable
                 onDragStart={(e) => {
                   setDragging(i);
@@ -308,10 +344,16 @@ export default function Today() {
                   e.preventDefault();
                   e.dataTransfer.dropEffect = "move";
                   if (over !== i) setOver(i);
+                  // Reorder live so rows slide out of the way under the cursor,
+                  // rather than everything snapping at drop time.
+                  if (dragging !== null && dragging !== i) {
+                    captureRects();
+                    move(dragging, i);
+                    setDragging(i);
+                  }
                 }}
                 onDrop={(e) => {
                   e.preventDefault();
-                  if (dragging !== null) move(dragging, i);
                   setDragging(null);
                   setOver(null);
                 }}
@@ -323,12 +365,15 @@ export default function Today() {
                   display: "flex",
                   alignItems: "flex-start",
                   gap: 4,
-                  borderRadius: 16,
+                  // Radius only while dragging: a rounded corner on a bottom-only border
+                  // curls the divider up at each end and reads as a boxed card, which is
+                  // not what the design has.
+                  borderRadius: isDragging ? 16 : 0,
                   borderBottom: "1px solid #F3EDE3",
-                  background: isTarget ? "#F7F3EC" : "transparent",
-                  boxShadow: isTarget ? "inset 0 2px 0 var(--wl-accent)" : "none",
-                  opacity: isDragging ? 0.45 : 1,
-                  transition: "background .18s ease, opacity .18s ease, box-shadow .18s ease",
+                  background: isDragging ? "#F7F3EC" : "transparent",
+                  boxShadow: isDragging ? "0 8px 24px -12px rgba(23,21,15,.35)" : "none",
+                  opacity: isDragging ? 0.9 : 1,
+                  cursor: isDragging ? "grabbing" : "default",
                   animation: "wl-row .5s ease both",
                   animationDelay: `${i * 55}ms`,
                 }}
