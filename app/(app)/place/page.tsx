@@ -2,10 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { Bookmark, CalendarPlus, Navigation, Shuffle, Sparkles, ThumbsDown } from "lucide-react";
+import { useState } from "react";
 import { ALTS, TRANSPORT } from "@/lib/mock/ui";
 import { ImageSlot } from "@/components/ImageSlot";
 import { photo, photoFor } from "@/lib/photos";
 import { MapFrame } from "@/components/MapFrame";
+import { GoogleMapsDirectionsLink } from "@/components/GoogleMapsDirectionsLink";
 import { Eyebrow, MONO, SERIF } from "@/components/ui";
 
 const TAGS = [
@@ -16,6 +18,7 @@ const TAGS = [
 
 export default function PlaceDetail() {
   const router = useRouter();
+  const [mainPhoto, setMainPhoto] = useState(photoFor("Librairie Bertrand"));
 
   return (
     <div style={{ animation: "wl-screen .46s cubic-bezier(.22,.68,.16,1) both", maxWidth: 1120, margin: "0 auto" }}>
@@ -25,18 +28,36 @@ export default function PlaceDetail() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 20 }}>
         <div>
-          <ImageSlot placeholder="Librairie Bertrand" photo={photoFor("Librairie Bertrand")} radius={24} style={{ display: "block", width: "100%", height: "clamp(220px,30vw,320px)" }} />
+          <ImageSlot placeholder="Librairie Bertrand" photo={mainPhoto} radius={24} style={{ display: "block", width: "100%", height: "clamp(220px,30vw,320px)" }} />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginTop: 10 }}>
-            {["drawn-quarterly", "cafe-interior", "old-montreal"].map((slug) => (
-              <ImageSlot key={slug} placeholder="Photo" photo={photo(slug)} radius={14} style={{ display: "block", height: 76 }} />
-            ))}
+            {["drawn-quarterly", "cafe-interior", "old-montreal"].map((slug) => {
+              const galleryPhoto = photo(slug);
+              const selected = mainPhoto === galleryPhoto;
+
+              return (
+                <button
+                  key={slug}
+                  type="button"
+                  onClick={() => setMainPhoto(galleryPhoto)}
+                  aria-label={`Show this photo of Librairie Bertrand`}
+                  aria-pressed={selected}
+                  style={{ border: 0, borderRadius: 14, padding: 0, background: "transparent", overflow: "hidden", boxShadow: selected ? "0 0 0 2px var(--wl-accent)" : "none" }}
+                >
+                  <ImageSlot placeholder="Photo" photo={galleryPhoto} radius={14} style={{ display: "block", height: 76 }} />
+                </button>
+              );
+            })}
           </div>
           <div style={{ border: "1px solid var(--wl-line)", borderRadius: 20, overflow: "hidden", marginTop: 14, background: "#FFF" }}>
             <div style={{ position: "relative", height: 190, background: "#EFEAE1" }}>
               <MapFrame query="place=bertrand" title="Librairie Bertrand on the map" />
             </div>
             <div style={{ padding: "12px 16px", fontSize: 13, color: "var(--wl-muted)" }}>
-              430 rue Saint-Pierre, Old Montreal · 6 min from Pointe-à-Callière
+              <GoogleMapsDirectionsLink
+                address="430 rue Saint-Pierre, Old Montreal · 6 min from Pointe-à-Callière"
+                destination="Librairie Bertrand, 430 rue Saint-Pierre, Montréal"
+                placeName="Librairie Bertrand"
+              />
             </div>
           </div>
         </div>
@@ -86,9 +107,9 @@ export default function PlaceDetail() {
             {TRANSPORT.map((r) => (
               <div key={r.mode} style={{ display: "flex", gap: 12, alignItems: "center", padding: "11px 0", borderTop: "1px solid #F3EDE3" }}>
                 <span style={{ flex: "1 1 auto", fontSize: 14.5, fontWeight: 700 }}>{r.mode}</span>
-                <span style={{ flex: "0 0 70px", fontSize: 13.5, color: "var(--wl-muted)" }}>{r.time}</span>
-                <span style={{ flex: "0 0 60px", fontSize: 13.5, fontWeight: 700, textAlign: "right" }}>{r.cost}</span>
-                <span style={{ flex: "0 0 auto", padding: "4px 10px", borderRadius: 999, fontSize: 11.5, fontWeight: 700, background: r.tagBg, color: r.tagFg }}>
+                <span style={{ flex: "0 0 70px", fontSize: 13.5, color: "var(--wl-muted)", fontVariantNumeric: "tabular-nums", textAlign: "right" }}>{r.time}</span>
+                <span style={{ flex: "0 0 60px", fontSize: 13.5, fontWeight: 700, fontVariantNumeric: "tabular-nums", textAlign: "right" }}>{r.cost}</span>
+                <span style={{ flex: "0 0 104px", padding: "4px 10px", borderRadius: 999, fontSize: 11.5, fontWeight: 700, background: r.tagBg, color: r.tagFg, textAlign: "center", whiteSpace: "nowrap" }}>
                   {r.tag}
                 </span>
               </div>
