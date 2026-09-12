@@ -380,3 +380,44 @@ clean, and `mock: true` makes no network calls at all.
 - Commit style: `feat(b): add Overpass POI provider with tile cache`
 - No AI attribution in commits.
 - **Blocked >20 min → say so.** Especially on Overpass throttling or an Exa surprise.
+
+---
+
+## Open requirements for lead review
+
+These contract gaps block the affected Lane B tasks. They need a shared-contract or
+plan decision before implementation can be correct.
+
+### B3 — geocoding timezone
+
+`GeocodeProvider.geocode(query, ctx?)` has no timezone input, while its required
+`Destination` result requires `timezone`. Decide whether `nominatim.ts` should receive
+`weather.timezoneFor` as a factory dependency when `createProviders()` wires providers,
+or change the shared provider contract to include a timezone resolution path.
+
+### B4 — category interests
+
+The OSM category table supplies selectors and ambience for every category, but gives
+`Interest[]` only for `museum`, `park`, and `cafe`; all remaining mappings are an
+ellipsis. Provide the canonical `PlaceCategory` → `Interest[]` table so `tags.ts` can
+use it verbatim. B6 depends on this mapping through `tags.ts` and `normalize.ts`.
+
+### B5 — public-holiday opening hours
+
+The `opening_hours` package requires a country context for valid tags containing
+`PH`, including the plan's `"Mo-Fr 09:00-12:00,13:00-17:00; PH off"` example. The
+planned string-only converter has no country or location input. Decide whether the
+converter should accept a country code or a Nominatim context, and identify where that
+data will be supplied.
+
+### B7 — weather forecast trip ID
+
+`WeatherProvider.forecast(coords, start, end, ctx?)` has no `tripId` argument, but its
+required `WeatherForecast` result requires `tripId`. Add `tripId` to the provider
+input, make the result field optional, or otherwise define the authoritative source.
+
+### B11 — provider environment contract
+
+The planned `createProviders(env: Env)` export references `Env`, but no shared `Env`
+type is declared. Define its owner and fields, including `EXA_API_KEY`,
+`EXA_BUDGET_USD`, `EXA_SOFT_CAP_RATIO`, and `NOMINATIM_USER_AGENT`.
