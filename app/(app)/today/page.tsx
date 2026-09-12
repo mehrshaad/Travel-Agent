@@ -403,7 +403,7 @@ export default function Today() {
             </div>
           </div>
           <div style={{ position: "relative", height: "clamp(300px,38vw,420px)", background: "#EFEAE1" }}>
-            <MapFrame query={`day=2&order=${order.join(",")}`} title="Day 2 route through Montreal — real map" />
+            <MapFrame query={`day=2&mode=${mode}&order=${order.join(",")}`} title={`Day 2 route through Montreal — ${mode}`} />
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, padding: "14px 18px", borderTop: "1px solid #F3EDE3", background: "var(--wl-bg)" }}>
             {(plan

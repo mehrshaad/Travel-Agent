@@ -83,11 +83,50 @@
     attribution: '© OpenStreetMap contributors', maxZoom: 19
   }).addTo(map);
 
+  // The route line answers to the travel mode: walking is a dashed footpath, transit
+  // follows the metro's own colours, taxi is a solid road line.
+  var MODE = q.get('mode') || 'walk';
+  var MODE_STYLE = {
+    walk:    { color: '#17150F', weight: 2.5, opacity: .5,  dashArray: '7 7',  label: 'Walking route' },
+    transit: { color: '#F08C00', weight: 4,   opacity: .85, dashArray: null,   label: 'Métro + walking' },
+    taxi:    { color: '#E0603C', weight: 4,   opacity: .8,  dashArray: null,   label: 'By road' }
+  };
+  var style = MODE_STYLE[MODE] || MODE_STYLE.walk;
+
   if (!single) {
     L.polyline(stops.map(function (s) { return s.ll; }), {
-      color: '#17150F', weight: 2.5, opacity: .5, dashArray: '7 7'
+      color: style.color, weight: style.weight, opacity: style.opacity, dashArray: style.dashArray
     }).addTo(map);
   }
+
+  // In transit mode, show the métro stations themselves so the route reads as a
+  // transit map rather than a line between two cafés.
+  if (MODE === 'transit' && !single) {
+    fetch('./montreal-transit.json')
+      .then(function (r) { return r.json(); })
+      .then(function (net) {
+        var bounds = L.latLngBounds(stops.map(function (s) { return s.ll; })).pad(0.25);
+        (net.stops || []).forEach(function (st) {
+          if (!st.lat || !bounds.contains([st.lat, st.lng])) return;
+          L.circleMarker([st.lat, st.lng], {
+            radius: 4, color: '#fff', weight: 1.5, fillColor: '#F08C00', fillOpacity: .95
+          }).addTo(map).bindPopup('<div class="wl-pop"><b>' + st.name + '</b><span>Métro · STM</span></div>');
+        });
+      })
+      .catch(function () { /* stations are a nicety; the route still draws */ });
+  }
+
+  // Small legend so the mode is readable without the surrounding UI.
+  var legend = L.control({ position: 'bottomleft' });
+  legend.onAdd = function () {
+    var el = L.DomUtil.create('div');
+    el.style.cssText = 'background:rgba(255,255,255,.92);padding:5px 9px;border-radius:8px;' +
+      'font:600 11px Manrope,system-ui,sans-serif;color:#3A352B;box-shadow:0 2px 8px rgba(23,21,15,.18)';
+    el.innerHTML = '<span style="display:inline-block;width:10px;height:3px;vertical-align:middle;' +
+      'margin-right:6px;background:' + style.color + '"></span>' + style.label;
+    return el;
+  };
+  legend.addTo(map);
 
   stops.forEach(function (s, i) {
     L.marker(s.ll, {
