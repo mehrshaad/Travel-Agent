@@ -1,10 +1,26 @@
+import { Banknote, CircleParking, LifeBuoy, Luggage, Pill, ShoppingCart, Signal, Toilet, WashingMachine } from "lucide-react";
 import { ESSENTIALS } from "@/lib/mock/ui";
 import { Eyebrow, MONO, SERIF } from "@/components/ui";
+
+/** One icon per essential kind; anything unmapped renders without one. */
+const KIND_ICONS: Record<string, typeof Pill> = {
+  pharmacy: Pill,
+  atm: Banknote,
+  grocery: ShoppingCart,
+  laundromat: WashingMachine,
+  luggage: Luggage,
+  "sim / esim": Signal,
+  restroom: Toilet,
+  "washroom / parking": CircleParking,
+};
 
 export default function LocalEssentials() {
   return (
     <div style={{ animation: "wl-screen .46s cubic-bezier(.22,.68,.16,1) both", maxWidth: 1180, margin: "0 auto" }}>
-      <Eyebrow style={{ marginBottom: 7 }}>Fixer · the boring things that ruin trips</Eyebrow>
+      <Eyebrow style={{ marginBottom: 7, display: "flex", alignItems: "center", gap: 7 }}>
+        <LifeBuoy size={14} strokeWidth={2} color="currentColor" />
+        Fixer · the boring things that ruin trips
+      </Eyebrow>
       <h1 style={{ margin: "0 0 6px", fontFamily: SERIF, fontWeight: 400, fontSize: "clamp(28px,3.6vw,40px)", lineHeight: 1.05 }}>
         Local essentials, already found
       </h1>
@@ -14,11 +30,14 @@ export default function LocalEssentials() {
       </p>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 14 }}>
-        {ESSENTIALS.map((e) => (
+        {ESSENTIALS.map((e) => {
+          const Icon = KIND_ICONS[e.kind];
+          return (
           <div key={e.name} style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 20, padding: "17px 18px", display: "flex", flexDirection: "column", gap: 7 }}>
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <span style={{ width: 10, height: 10, borderRadius: 3, background: e.color }} />
-              <span style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--wl-muted)" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: MONO, fontSize: 10.5, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--wl-muted)" }}>
+                {Icon && <Icon size={14} strokeWidth={2} color="currentColor" />}
                 {e.kind}
               </span>
             </div>
@@ -31,7 +50,8 @@ export default function LocalEssentials() {
               </span>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

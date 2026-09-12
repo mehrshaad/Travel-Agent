@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ArrowRight, BedDouble, CalendarDays, Check, Download, HelpCircle, MapPin, X } from "lucide-react";
 import { DAY_TABS, PLANS, QUESTIONS } from "@/lib/mock/ui";
 import { ImageSlot } from "@/components/ImageSlot";
 import { photoFor } from "@/lib/photos";
@@ -17,17 +18,22 @@ export default function Itinerary() {
     <div style={{ animation: "wl-screen .46s cubic-bezier(.22,.68,.16,1) both", maxWidth: 1180, margin: "0 auto" }}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "flex-end", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
-          <Eyebrow style={{ marginBottom: 7 }}>Montreal · Sep 15–19 · 2 travellers</Eyebrow>
+          <Eyebrow style={{ marginBottom: 7, display: "flex", alignItems: "center", gap: 7 }}>
+            <CalendarDays size={14} strokeWidth={2} color="currentColor" />
+            Montreal · Sep 15–19 · 2 travellers
+          </Eyebrow>
           <h1 style={{ margin: 0, fontFamily: SERIF, fontWeight: 400, fontSize: "clamp(28px,3.6vw,40px)", lineHeight: 1.05 }}>
             Four days, still moving
           </h1>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button style={{ border: "1px solid #E4DBCC", background: "#FFF", fontSize: 13.5, fontWeight: 700, padding: "10px 16px", borderRadius: 999 }}>
+          <button style={{ border: "1px solid #E4DBCC", background: "#FFF", fontSize: 13.5, fontWeight: 700, padding: "10px 16px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <Download size={16} strokeWidth={2} color="currentColor" />
             Export
           </button>
-          <button onClick={() => router.push("/today")} style={{ border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 13.5, fontWeight: 700, padding: "10px 16px", borderRadius: 999 }}>
+          <button onClick={() => router.push("/today")} style={{ border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 13.5, fontWeight: 700, padding: "10px 16px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8 }}>
             Jump to today
+            <ArrowRight size={16} strokeWidth={2} color="currentColor" />
           </button>
         </div>
       </div>
@@ -87,7 +93,10 @@ export default function Itinerary() {
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <div style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 24, overflow: "hidden" }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "space-between", padding: "15px 18px", borderBottom: "1px solid #F3EDE3" }}>
-              <Eyebrow>This day on the map</Eyebrow>
+              <Eyebrow style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <MapPin size={14} strokeWidth={2} color="currentColor" />
+                This day on the map
+              </Eyebrow>
               <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--wl-muted)" }}>{plan.items.length} stops</span>
             </div>
             <div style={{ position: "relative", height: "clamp(220px,26vw,300px)", background: "#EFEAE1" }}>
@@ -96,7 +105,10 @@ export default function Itinerary() {
           </div>
 
           <div style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 24, padding: 20 }}>
-            <Eyebrow style={{ marginBottom: 14 }}>Where you&rsquo;re sleeping</Eyebrow>
+            <Eyebrow style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 7 }}>
+              <BedDouble size={14} strokeWidth={2} color="currentColor" />
+              Where you&rsquo;re sleeping
+            </Eyebrow>
             <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
               <ImageSlot placeholder="Hôtel Nelligan" photo={photoFor("Hôtel Nelligan")} radius={16} style={{ flex: "0 0 96px", height: 96 }} />
               <div style={{ flex: "1 1 180px", minWidth: 0 }}>
@@ -113,15 +125,20 @@ export default function Itinerary() {
           </div>
 
           <div style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 24, padding: 20 }}>
-            <Eyebrow style={{ marginBottom: 14 }}>Open questions from Atlas</Eyebrow>
+            <Eyebrow style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 7 }}>
+              <HelpCircle size={14} strokeWidth={2} color="currentColor" />
+              Open questions from Atlas
+            </Eyebrow>
             {QUESTIONS.map((q) => (
               <div key={q.text} style={{ padding: "12px 0", borderBottom: "1px solid #F3EDE3" }}>
                 <p style={{ margin: "0 0 10px", fontSize: 14, color: "var(--wl-ink-2)" }}>{q.text}</p>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button style={{ border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 12.5, fontWeight: 700, padding: "8px 14px", borderRadius: 999 }}>
+                  <button style={{ border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 12.5, fontWeight: 700, padding: "8px 14px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 7 }}>
+                    <Check size={16} strokeWidth={2} color="currentColor" />
                     {q.yes}
                   </button>
-                  <button style={{ border: "1px solid #E4DBCC", background: "#FFF", fontSize: 12.5, fontWeight: 700, padding: "8px 14px", borderRadius: 999 }}>
+                  <button style={{ border: "1px solid #E4DBCC", background: "#FFF", fontSize: 12.5, fontWeight: 700, padding: "8px 14px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 7 }}>
+                    <X size={16} strokeWidth={2} color="currentColor" />
                     {q.no}
                   </button>
                 </div>

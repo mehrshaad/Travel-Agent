@@ -1,17 +1,29 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { ArrowRight, CalendarDays, Compass, Footprints, MapPin, Repeat, Sparkles, Star, Wallet } from "lucide-react";
 import { HIGHLIGHTS, LEARNED, NEXT_TRIPS, RECAP_STATS } from "@/lib/mock/ui";
 import { ImageSlot } from "@/components/ImageSlot";
 import { photo } from "@/lib/photos";
 import { Eyebrow, MONO, SERIF } from "@/components/ui";
+
+/** One icon per recap stat; anything unmapped renders without one. */
+const STAT_ICONS: Record<string, typeof Wallet> = {
+  Spent: Wallet,
+  Walked: Footprints,
+  "Stops made": MapPin,
+  "Re-plans": Repeat,
+};
 
 export default function Recap() {
   const router = useRouter();
 
   return (
     <div style={{ animation: "wl-screen .46s cubic-bezier(.22,.68,.16,1) both", maxWidth: 1120, margin: "0 auto" }}>
-      <Eyebrow style={{ marginBottom: 7 }}>Montreal · Sep 15–19 · trip closed</Eyebrow>
+      <Eyebrow style={{ marginBottom: 7, display: "flex", alignItems: "center", gap: 7 }}>
+        <CalendarDays size={14} strokeWidth={2} color="currentColor" />
+        Montreal · Sep 15–19 · trip closed
+      </Eyebrow>
       <h1 style={{ margin: "0 0 6px", fontFamily: SERIF, fontWeight: 400, fontSize: "clamp(30px,4vw,44px)", lineHeight: 1.05 }}>
         Four days, eleven re-plans, $46 left over
       </h1>
@@ -21,20 +33,29 @@ export default function Recap() {
       </p>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 14, marginBottom: 20 }}>
-        {RECAP_STATS.map((r) => (
+        {RECAP_STATS.map((r) => {
+          const Icon = STAT_ICONS[r.label];
+          return (
           <div key={r.label} style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 20, padding: 18 }}>
             <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--wl-muted)" }}>
               {r.label}
             </div>
-            <div style={{ fontSize: 26, fontWeight: 800, marginTop: 6, letterSpacing: "-.01em" }}>{r.value}</div>
+            <div style={{ fontSize: 26, fontWeight: 800, marginTop: 6, letterSpacing: "-.01em", display: "flex", alignItems: "center", gap: 9 }}>
+              {Icon && <Icon size={18} strokeWidth={2} color="currentColor" />}
+              {r.value}
+            </div>
             <div style={{ fontSize: 12.5, color: "var(--wl-muted)", marginTop: 3 }}>{r.sub}</div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 18 }}>
         <div style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 24, padding: 20 }}>
-          <Eyebrow style={{ marginBottom: 14 }}>The five you&rsquo;d do again</Eyebrow>
+          <Eyebrow style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 7 }}>
+            <Star size={14} strokeWidth={2} color="currentColor" />
+            The five you&rsquo;d do again
+          </Eyebrow>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(120px,1fr))", gap: 10, marginBottom: 16 }}>
             {["pointe-a-calliere", "persian-food", "bookstore", "notre-dame"].map((slug) => (
               <ImageSlot key={slug} placeholder="Photo" photo={photo(slug)} radius={14} style={{ display: "block", height: 92 }} />
@@ -54,9 +75,10 @@ export default function Recap() {
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
               <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#EA5E9B", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
                 <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#4A0F2C" }} />
-                <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#4A0F2C" }} />
+                <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#4A0F2C", animation: "wl-wink 5.5s infinite", animationDelay: "1.1s" }} />
               </div>
-              <span style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: ".12em", textTransform: "uppercase", color: "#9C9482" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: MONO, fontSize: 10.5, letterSpacing: ".12em", textTransform: "uppercase", color: "#9C9482" }}>
+                <Sparkles size={14} strokeWidth={2} color="currentColor" />
                 Echo · packed for next time
               </span>
             </div>
@@ -68,15 +90,19 @@ export default function Recap() {
           </div>
 
           <div style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 24, padding: 20 }}>
-            <Eyebrow style={{ marginBottom: 14 }}>Atlas suggests next</Eyebrow>
+            <Eyebrow style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 7 }}>
+              <Compass size={14} strokeWidth={2} color="currentColor" />
+              Atlas suggests next
+            </Eyebrow>
             {NEXT_TRIPS.map((n) => (
               <div key={n.city} style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "baseline", padding: "12px 0", borderTop: "1px solid #F3EDE3" }}>
                 <span style={{ flex: "1 1 120px", fontSize: 15, fontWeight: 700 }}>{n.city}</span>
                 <span style={{ flex: "1 1 160px", fontSize: 13, color: "var(--wl-muted)" }}>{n.why}</span>
               </div>
             ))}
-            <button onClick={() => router.push("/")} style={{ marginTop: 16, border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 14, fontWeight: 700, padding: "12px 20px", borderRadius: 999 }}>
+            <button onClick={() => router.push("/")} style={{ marginTop: 16, border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 14, fontWeight: 700, padding: "12px 20px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8 }}>
               Start the next trip
+              <ArrowRight size={16} strokeWidth={2} color="currentColor" />
             </button>
           </div>
         </div>

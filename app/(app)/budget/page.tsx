@@ -1,3 +1,4 @@
+import { CalendarDays, Receipt, Wallet } from "lucide-react";
 import { BUDGET_DAYS, SPEND_CATS, TXNS } from "@/lib/mock/ui";
 import { Eyebrow, MONO, SERIF } from "@/components/ui";
 
@@ -14,7 +15,10 @@ export default function Budget() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 18, marginBottom: 18 }}>
         <div style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 24, padding: 22 }}>
-          <Eyebrow style={{ marginBottom: 18 }}>Where it&rsquo;s going</Eyebrow>
+          <Eyebrow style={{ marginBottom: 18, display: "flex", alignItems: "center", gap: 7 }}>
+            <Wallet size={14} strokeWidth={2} color="currentColor" />
+            Where it&rsquo;s going
+          </Eyebrow>
           <div style={{ display: "flex", gap: 22, alignItems: "center", flexWrap: "wrap" }}>
             <div
               style={{
@@ -46,7 +50,10 @@ export default function Budget() {
         </div>
 
         <div style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 24, padding: 22 }}>
-          <Eyebrow style={{ marginBottom: 18 }}>Day by day vs $150</Eyebrow>
+          <Eyebrow style={{ marginBottom: 18, display: "flex", alignItems: "center", gap: 7 }}>
+            <CalendarDays size={14} strokeWidth={2} color="currentColor" />
+            Day by day vs $150
+          </Eyebrow>
           {BUDGET_DAYS.map((d) => (
             <div key={d.label} style={{ marginBottom: 14 }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, marginBottom: 6 }}>
@@ -66,7 +73,10 @@ export default function Budget() {
       </div>
 
       <div style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 24, padding: "6px 20px 14px" }}>
-        <Eyebrow style={{ padding: "16px 0 4px" }}>Recent</Eyebrow>
+        <Eyebrow style={{ padding: "16px 0 4px", display: "flex", alignItems: "center", gap: 7 }}>
+          <Receipt size={14} strokeWidth={2} color="currentColor" />
+          Recent
+        </Eyebrow>
         {TXNS.map((t) => (
           <div key={t.name} style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", padding: "13px 0", borderTop: "1px solid #F3EDE3" }}>
             <span style={{ width: 9, height: 9, borderRadius: "50%", background: t.color }} />

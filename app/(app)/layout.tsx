@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { Bell } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/mock/ui";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -35,19 +36,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         >
           <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap" }}>
             <Link href="/" style={{ display: "flex", alignItems: "center", gap: 9 }}>
-              <div
-                style={{
-                  width: 27,
-                  height: 27,
-                  borderRadius: 9,
-                  background: "linear-gradient(135deg,#F2724B,#F2A93B)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#FBF8F3" }} />
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/icon.png" alt="Waylo" style={{ width: 27, height: 27, borderRadius: 9, display: "block" }} />
               <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: "-.02em", color: "var(--wl-ink)" }}>
                 Waylo
               </span>
@@ -86,8 +76,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 color: "var(--wl-ink)",
                 padding: "9px 15px",
                 borderRadius: 999,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 7,
               }}
             >
+              <Bell size={16} strokeWidth={2} color="currentColor" />
               Activity
               <span
                 style={{

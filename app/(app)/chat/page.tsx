@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { MessageCircle, Send } from "lucide-react";
 import { CREW, INITIAL_CHAT, REPLIES, type ChatMessage } from "@/lib/mock/ui";
 import { Eyebrow, MONO, SERIF } from "@/components/ui";
 
@@ -33,7 +34,10 @@ export default function CrewChat() {
     <div style={{ animation: "wl-screen .46s cubic-bezier(.22,.68,.16,1) both", maxWidth: 880, margin: "0 auto" }}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 14, alignItems: "flex-end", justifyContent: "space-between", marginBottom: 18 }}>
         <div>
-          <Eyebrow style={{ marginBottom: 7 }}>8 agents on duty · Atlas answering first</Eyebrow>
+          <Eyebrow style={{ marginBottom: 7, display: "flex", alignItems: "center", gap: 7 }}>
+            <MessageCircle size={14} strokeWidth={2} color="currentColor" />
+            8 agents on duty · Atlas answering first
+          </Eyebrow>
           <h1 style={{ margin: 0, fontFamily: SERIF, fontWeight: 400, fontSize: "clamp(28px,3.6vw,40px)", lineHeight: 1.05 }}>
             Ask the crew
           </h1>
@@ -127,8 +131,9 @@ export default function CrewChat() {
             placeholder="Ask about food, weather, money, anything…"
             style={{ flex: "1 1 220px", minWidth: 0, border: "1px solid var(--wl-line)", borderRadius: 999, padding: "13px 18px", font: "inherit", fontSize: 14.5, outline: "none", background: "var(--wl-bg)", color: "var(--wl-ink)" }}
           />
-          <button onClick={send} style={{ flex: "0 0 auto", border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 14, fontWeight: 700, padding: "13px 22px", borderRadius: 999 }}>
+          <button onClick={send} style={{ flex: "0 0 auto", border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 14, fontWeight: 700, padding: "13px 22px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8 }}>
             Send
+            <Send size={16} strokeWidth={2} color="currentColor" />
           </button>
         </div>
       </div>

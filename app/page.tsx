@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ArrowRight, Brain, CloudRain, Eye, GraduationCap, Sparkles, Zap } from "lucide-react";
 import { EXAMPLES } from "@/lib/mock/ui";
 import { MONO, SERIF } from "@/components/ui";
 
@@ -12,6 +13,9 @@ const LOOP = [
   ["03 · Act", "Re-orders your day, re-routes transport, and tells you exactly why it changed."],
   ["04 · Learn", "Three rejected $50 dinners is a preference. Waylo stops suggesting them."],
 ];
+
+/** One icon per loop step, aligned with LOOP by index. */
+const LOOP_ICONS = [Eye, Brain, Zap, GraduationCap];
 
 export default function Landing() {
   const router = useRouter();
@@ -37,19 +41,8 @@ export default function Landing() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div
-            style={{
-              width: 30,
-              height: 30,
-              borderRadius: 10,
-              background: "linear-gradient(135deg,#F2724B,#F2A93B)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <div style={{ width: 9, height: 9, borderRadius: "50%", background: "#FBF8F3" }} />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icon.png" alt="Waylo" style={{ width: 30, height: 30, borderRadius: 10, display: "block" }} />
           <span style={{ fontSize: 19, fontWeight: 800, letterSpacing: "-.02em" }}>Waylo</span>
         </div>
         <nav style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
@@ -69,9 +62,12 @@ export default function Landing() {
               fontWeight: 700,
               padding: "9px 18px",
               borderRadius: 999,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 7,
             }}
           >
-            Open demo trip
+            Open demo trip <ArrowRight size={16} strokeWidth={2} color="currentColor" />
           </Link>
         </nav>
       </header>
@@ -226,6 +222,7 @@ export default function Landing() {
                   gap: 9,
                 }}
               >
+                <Sparkles size={16} strokeWidth={2} color="currentColor" />
                 Plan my days <span style={{ fontSize: 16, lineHeight: 1 }}>→</span>
               </button>
             </div>
@@ -265,7 +262,9 @@ export default function Landing() {
           gap: 22,
         }}
       >
-        {LOOP.map(([title, body]) => (
+        {LOOP.map(([title, body], i) => {
+          const Icon = LOOP_ICONS[i];
+          return (
           <div key={title}>
             <div
               style={{
@@ -275,13 +274,18 @@ export default function Landing() {
                 textTransform: "uppercase",
                 color: "var(--wl-muted)",
                 marginBottom: 8,
+                display: "flex",
+                alignItems: "center",
+                gap: 7,
               }}
             >
+              <Icon size={14} strokeWidth={2} color="currentColor" />
               {title}
             </div>
             <p style={{ margin: 0, fontSize: 14.5, color: "var(--wl-ink-2)" }}>{body}</p>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <div style={{ padding: "0 clamp(18px,4vw,54px) 26px" }}>
@@ -389,10 +393,11 @@ function HeroArt() {
                 gap: 3,
               }}
             >
-              <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#08312E", animation: "wl-blink 4s infinite" }} />
-              <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#08312E", animation: "wl-blink 4s infinite" }} />
+              <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#08312E", animation: "wl-blink 4.4s infinite", animationDelay: "0.9s" }} />
+              <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#08312E", animation: "wl-blink 4.4s infinite", animationDelay: "0.9s" }} />
             </div>
-            <span style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: ".12em", textTransform: "uppercase", color: "#9C9482" }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: MONO, fontSize: 10.5, letterSpacing: ".12em", textTransform: "uppercase", color: "#9C9482" }}>
+              <CloudRain size={14} strokeWidth={2} color="currentColor" />
               Nimbus · weather
             </span>
           </div>

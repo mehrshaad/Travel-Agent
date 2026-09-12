@@ -1,3 +1,4 @@
+import { BedDouble, Footprints, MapPin, Star, Wallet } from "lucide-react";
 import { STAYS } from "@/lib/mock/ui";
 import { ImageSlot } from "@/components/ImageSlot";
 import { photoFor } from "@/lib/photos";
@@ -9,10 +10,16 @@ const FACTS = [
   ["Transport saved", "$19 / day", "#0F6F68"],
 ];
 
+/** One icon per fact, aligned with FACTS by index. */
+const FACT_ICONS = [Footprints, MapPin, Wallet];
+
 export default function Stay() {
   return (
     <div style={{ animation: "wl-screen .46s cubic-bezier(.22,.68,.16,1) both", maxWidth: 1180, margin: "0 auto" }}>
-      <Eyebrow style={{ marginBottom: 7 }}>Nest · 38 stays screened, 6 survived</Eyebrow>
+      <Eyebrow style={{ marginBottom: 7, display: "flex", alignItems: "center", gap: 7 }}>
+        <BedDouble size={14} strokeWidth={2} color="currentColor" />
+        Nest · 38 stays screened, 6 survived
+      </Eyebrow>
       <h1 style={{ margin: "0 0 6px", fontFamily: SERIF, fontWeight: 400, fontSize: "clamp(28px,3.6vw,40px)", lineHeight: 1.05 }}>
         Where you sleep decides what you walk
       </h1>
@@ -42,14 +49,20 @@ export default function Stay() {
               <span>$744 total</span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 12, marginBottom: 16 }}>
-              {FACTS.map(([label, value, color]) => (
+              {FACTS.map(([label, value, color], i) => {
+                const Icon = FACT_ICONS[i];
+                return (
                 <div key={label}>
                   <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--wl-muted)" }}>
                     {label}
                   </div>
-                  <div style={{ fontSize: 17, fontWeight: 800, color }}>{value}</div>
+                  <div style={{ fontSize: 17, fontWeight: 800, color, display: "flex", alignItems: "center", gap: 7 }}>
+                    <Icon size={18} strokeWidth={2} color="currentColor" />
+                    {value}
+                  </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
             <p style={{ margin: 0, fontSize: 14, color: "var(--wl-ink-2)" }}>
               Nest: the $148 option in Griffintown looked cheaper until Dash costed the commute — four
@@ -59,7 +72,10 @@ export default function Stay() {
         </div>
       </div>
 
-      <Eyebrow style={{ marginBottom: 12 }}>Runners-up, kept warm for next time</Eyebrow>
+      <Eyebrow style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 7 }}>
+        <Star size={14} strokeWidth={2} color="currentColor" />
+        Runners-up, kept warm for next time
+      </Eyebrow>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(250px,1fr))", gap: 16 }}>
         {STAYS.map((h) => (
           <div key={h.name} style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 22, overflow: "hidden", display: "flex", flexDirection: "column" }}>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Bookmark, CalendarPlus, Navigation, Shuffle, Sparkles, ThumbsDown } from "lucide-react";
 import { ALTS, TRANSPORT } from "@/lib/mock/ui";
 import { ImageSlot } from "@/components/ImageSlot";
 import { photo, photoFor } from "@/lib/photos";
@@ -63,9 +64,10 @@ export default function PlaceDetail() {
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
               <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#EA5E9B", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
                 <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#4A0F2C" }} />
-                <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#4A0F2C" }} />
+                <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#4A0F2C", animation: "wl-wink 5s infinite", animationDelay: "2.7s" }} />
               </div>
-              <span style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: ".12em", textTransform: "uppercase", color: "#9C9482" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: MONO, fontSize: 10.5, letterSpacing: ".12em", textTransform: "uppercase", color: "#9C9482" }}>
+                <Sparkles size={14} strokeWidth={2} color="currentColor" />
                 Echo · why this?
               </span>
             </div>
@@ -77,7 +79,10 @@ export default function PlaceDetail() {
           </div>
 
           <div style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 20, padding: "6px 16px", marginBottom: 18 }}>
-            <Eyebrow style={{ padding: "12px 0 6px" }}>How to get there · Dash</Eyebrow>
+            <Eyebrow style={{ padding: "12px 0 6px", display: "flex", alignItems: "center", gap: 7 }}>
+              <Navigation size={14} strokeWidth={2} color="currentColor" />
+              How to get there · Dash
+            </Eyebrow>
             {TRANSPORT.map((r) => (
               <div key={r.mode} style={{ display: "flex", gap: 12, alignItems: "center", padding: "11px 0", borderTop: "1px solid #F3EDE3" }}>
                 <span style={{ flex: "1 1 auto", fontSize: 14.5, fontWeight: 700 }}>{r.mode}</span>
@@ -91,13 +96,16 @@ export default function PlaceDetail() {
           </div>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button style={{ border: 0, background: "var(--wl-accent)", color: "#FFF", fontSize: 14.5, fontWeight: 700, padding: "13px 22px", borderRadius: 999 }}>
+            <button style={{ border: 0, background: "var(--wl-accent)", color: "#FFF", fontSize: 14.5, fontWeight: 700, padding: "13px 22px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <CalendarPlus size={16} strokeWidth={2} color="currentColor" />
               Add to 4:30 PM
             </button>
-            <button style={{ border: "1px solid #E4DBCC", background: "#FFF", fontSize: 14.5, fontWeight: 700, padding: "13px 22px", borderRadius: 999 }}>
+            <button style={{ border: "1px solid #E4DBCC", background: "#FFF", fontSize: 14.5, fontWeight: 700, padding: "13px 22px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <Bookmark size={16} strokeWidth={2} color="currentColor" />
               Save for later
             </button>
-            <button onClick={() => router.push("/explore")} style={{ border: "1px solid #E4DBCC", background: "#FFF", fontSize: 14.5, fontWeight: 700, padding: "13px 22px", borderRadius: 999 }}>
+            <button onClick={() => router.push("/explore")} style={{ border: "1px solid #E4DBCC", background: "#FFF", fontSize: 14.5, fontWeight: 700, padding: "13px 22px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <ThumbsDown size={16} strokeWidth={2} color="currentColor" />
               Not my thing
             </button>
           </div>
@@ -105,7 +113,10 @@ export default function PlaceDetail() {
       </div>
 
       <div style={{ marginTop: 26 }}>
-        <Eyebrow style={{ marginBottom: 12 }}>If you&rsquo;d rather not — Muse&rsquo;s alternatives</Eyebrow>
+        <Eyebrow style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 7 }}>
+          <Shuffle size={14} strokeWidth={2} color="currentColor" />
+          If you&rsquo;d rather not — Muse&rsquo;s alternatives
+        </Eyebrow>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(230px,1fr))", gap: 14 }}>
           {ALTS.map((a) => (
             <div key={a.name} style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 20, overflow: "hidden" }}>

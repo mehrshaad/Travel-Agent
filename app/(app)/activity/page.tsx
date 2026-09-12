@@ -1,3 +1,4 @@
+import { Undo2 } from "lucide-react";
 import { FEED } from "@/lib/mock/ui";
 import { MONO, SERIF } from "@/components/ui";
 
@@ -12,12 +13,13 @@ export default function Activity() {
         read.
       </p>
 
-      {FEED.map((f) => (
+      {/* Every third agent winks (one eye); delay/duration vary by index so they never blink in unison. */}
+      {FEED.map((f, i) => (
         <div key={f.text} style={{ display: "flex", gap: 14, alignItems: "flex-start", marginBottom: 14 }}>
           <div style={{ flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, paddingTop: 6 }}>
             <div style={{ width: 38, height: 38, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", gap: 4, background: f.color }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "rgba(0,0,0,.6)", animation: "wl-blink 5s infinite" }} />
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "rgba(0,0,0,.6)", animation: "wl-blink 5s infinite" }} />
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "rgba(0,0,0,.6)", animation: i % 3 === 2 ? "none" : `wl-blink ${(3.6 + (i % 5) * 0.6).toFixed(1)}s infinite`, animationDelay: `${((i * 1.7) % 5).toFixed(1)}s` }} />
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "rgba(0,0,0,.6)", animation: `${i % 3 === 2 ? "wl-wink" : "wl-blink"} ${(3.6 + (i % 5) * 0.6).toFixed(1)}s infinite`, animationDelay: `${((i * 1.7) % 5).toFixed(1)}s` }} />
             </div>
             <div style={{ width: 2, flex: 1, minHeight: 20, background: "var(--wl-line)" }} />
           </div>
@@ -34,7 +36,8 @@ export default function Activity() {
                 {f.tag}
               </span>
               {f.undo && (
-                <button style={{ border: "1px solid #E4DBCC", background: "#FFF", fontSize: 11.5, fontWeight: 700, padding: "5px 11px", borderRadius: 999 }}>
+                <button style={{ border: "1px solid #E4DBCC", background: "#FFF", fontSize: 11.5, fontWeight: 700, padding: "5px 11px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <Undo2 size={16} strokeWidth={2} color="currentColor" />
                   Undo this
                 </button>
               )}

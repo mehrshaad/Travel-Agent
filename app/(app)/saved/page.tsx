@@ -1,8 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Bookmark, Check } from "lucide-react";
 import { BOOKINGS, SAVES } from "@/lib/mock/ui";
 import { ImageSlot } from "@/components/ImageSlot";
+import { slugify } from "@/lib/slug";
 import { photoFor } from "@/lib/photos";
 import { Eyebrow, SERIF } from "@/components/ui";
 
@@ -21,7 +23,10 @@ export default function Saved() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 18 }}>
         <div>
-          <Eyebrow style={{ marginBottom: 12 }}>Confirmed</Eyebrow>
+          <Eyebrow style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 7 }}>
+            <Check size={14} strokeWidth={2} color="currentColor" />
+            Confirmed
+          </Eyebrow>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {BOOKINGS.map((b) => (
               <div key={b.name} style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 20, padding: "16px 18px", display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
@@ -39,12 +44,15 @@ export default function Saved() {
         </div>
 
         <div>
-          <Eyebrow style={{ marginBottom: 12 }}>Saved, not scheduled</Eyebrow>
+          <Eyebrow style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 7 }}>
+            <Bookmark size={14} strokeWidth={2} color="currentColor" />
+            Saved, not scheduled
+          </Eyebrow>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(190px,1fr))", gap: 12 }}>
             {SAVES.map((s) => (
               <button
                 key={s.name}
-                onClick={() => router.push("/place")}
+                onClick={() => router.push(`/place/${slugify(s.name)}`)}
                 style={{ textAlign: "left", border: "1px solid var(--wl-line)", background: "#FFF", borderRadius: 18, overflow: "hidden", padding: 0 }}
               >
                 <ImageSlot placeholder={s.name} photo={photoFor(s.name)} radius={0} style={{ display: "block", height: 78 }} />

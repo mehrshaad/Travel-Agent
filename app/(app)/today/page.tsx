@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { CalendarDays, Check, Clock, CloudRain, Eye, Footprints, Sparkles, Train, Wallet } from "lucide-react";
 import { TODAY } from "@/lib/mock/ui";
 import { MapFrame } from "@/components/MapFrame";
 import { Eyebrow, MONO, SERIF } from "@/components/ui";
 
 const STATS = [
-  { label: "Weather", value: "21°C", suffix: "rain 3 PM", suffixColor: "#1FA39A" },
-  { label: "Today's spend", value: "$64", suffix: "/ $150", suffixColor: "var(--wl-muted)" },
-  { label: "On foot", value: "3.4 km", suffix: "of 6", suffixColor: "var(--wl-muted)" },
+  { label: "Weather", value: "21°C", suffix: "rain 3 PM", suffixColor: "#1FA39A", icon: CloudRain },
+  { label: "Today's spend", value: "$64", suffix: "/ $150", suffixColor: "var(--wl-muted)", icon: Wallet },
+  { label: "On foot", value: "3.4 km", suffix: "of 6", suffixColor: "var(--wl-muted)", icon: Footprints },
 ];
 
 const CARD: React.CSSProperties = {
@@ -26,7 +27,10 @@ export default function Today() {
     <div style={{ animation: "wl-screen .46s cubic-bezier(.22,.68,.16,1) both", maxWidth: 1360, margin: "0 auto" }}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 18, alignItems: "flex-end", justifyContent: "space-between", marginBottom: 22 }}>
         <div>
-          <Eyebrow style={{ marginBottom: 7 }}>Day 2 of 4 · Tuesday, Sep 16</Eyebrow>
+          <Eyebrow style={{ marginBottom: 7, display: "flex", alignItems: "center", gap: 7 }}>
+            <CalendarDays size={14} strokeWidth={2} color="currentColor" />
+            Day 2 of 4 · Tuesday, Sep 16
+          </Eyebrow>
           <h1 style={{ margin: 0, fontFamily: SERIF, fontWeight: 400, fontSize: "clamp(30px,4vw,44px)", lineHeight: 1.05 }}>
             Montreal, mostly on foot
           </h1>
@@ -37,7 +41,8 @@ export default function Today() {
               <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--wl-muted)" }}>
                 {s.label}
               </div>
-              <div style={{ fontSize: 17, fontWeight: 800, marginTop: 3 }}>
+              <div style={{ fontSize: 17, fontWeight: 800, marginTop: 3, display: "flex", alignItems: "center", gap: 7 }}>
+                <s.icon size={18} strokeWidth={2} color="currentColor" />
                 {s.value}{" "}
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: s.suffixColor }}>{s.suffix}</span>
               </div>
@@ -49,8 +54,8 @@ export default function Today() {
       {/* The replan banner — the moment the product is really selling. */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 14, alignItems: "flex-start", background: "var(--wl-ink)", color: "var(--wl-bg)", borderRadius: 22, padding: "clamp(16px,2vw,24px)", marginBottom: 20 }}>
         <div style={{ flex: "0 0 auto", width: 42, height: 42, borderRadius: "50%", background: "#1FA39A", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-          <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#08312E", animation: "wl-blink 4s infinite" }} />
-          <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#08312E", animation: "wl-blink 4s infinite" }} />
+          <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#08312E", animation: "wl-blink 3.8s infinite", animationDelay: "1.6s" }} />
+          <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#08312E", animation: "wl-blink 3.8s infinite", animationDelay: "1.6s" }} />
         </div>
         <div style={{ flex: "1 1 300px", minWidth: 0 }}>
           <div style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: ".12em", textTransform: "uppercase", color: "#9C9482", marginBottom: 6 }}>
@@ -63,10 +68,12 @@ export default function Today() {
           </p>
         </div>
         <div style={{ flex: "0 0 auto", display: "flex", gap: 9, flexWrap: "wrap" }}>
-          <button onClick={() => router.push("/activity")} style={{ border: "1px solid rgba(251,248,243,.24)", background: "transparent", color: "var(--wl-bg)", fontSize: 13.5, fontWeight: 700, padding: "10px 16px", borderRadius: 999 }}>
+          <button onClick={() => router.push("/activity")} style={{ border: "1px solid rgba(251,248,243,.24)", background: "transparent", color: "var(--wl-bg)", fontSize: 13.5, fontWeight: 700, padding: "10px 16px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <Eye size={16} strokeWidth={2} color="currentColor" />
             See the reasoning
           </button>
-          <button style={{ border: 0, background: "var(--wl-bg)", color: "var(--wl-ink)", fontSize: 13.5, fontWeight: 700, padding: "10px 16px", borderRadius: 999 }}>
+          <button style={{ border: 0, background: "var(--wl-bg)", color: "var(--wl-ink)", fontSize: 13.5, fontWeight: 700, padding: "10px 16px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <Check size={16} strokeWidth={2} color="currentColor" />
             Keep it
           </button>
         </div>
@@ -77,8 +84,14 @@ export default function Today() {
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "space-between", padding: "15px 18px", borderBottom: "1px solid #F3EDE3" }}>
             <Eyebrow>Route · {TODAY.length} stops</Eyebrow>
             <div style={{ display: "flex", gap: 6 }}>
-              <span style={{ padding: "6px 11px", borderRadius: 999, background: "var(--wl-sand-bg)", fontSize: 12, fontWeight: 700, color: "var(--wl-ink-2)" }}>Walking</span>
-              <span style={{ padding: "6px 11px", borderRadius: 999, background: "#FFF", border: "1px solid var(--wl-line)", fontSize: 12, fontWeight: 700, color: "var(--wl-muted)" }}>Transit</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 11px", borderRadius: 999, background: "var(--wl-sand-bg)", fontSize: 12, fontWeight: 700, color: "var(--wl-ink-2)" }}>
+                <Footprints size={16} strokeWidth={2} color="currentColor" />
+                Walking
+              </span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 11px", borderRadius: 999, background: "#FFF", border: "1px solid var(--wl-line)", fontSize: 12, fontWeight: 700, color: "var(--wl-muted)" }}>
+                <Train size={16} strokeWidth={2} color="currentColor" />
+                Transit
+              </span>
             </div>
           </div>
           <div style={{ position: "relative", height: "clamp(300px,38vw,420px)", background: "#EFEAE1" }}>
@@ -148,14 +161,16 @@ export default function Today() {
           ))}
 
           <div style={{ marginTop: 16, borderRadius: 20, padding: 18, background: "linear-gradient(135deg,#FFE9DC,#F4EBFB)", border: "1px solid #F2E4DA" }}>
-            <div style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: ".12em", textTransform: "uppercase", color: "#8C6A55", marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, fontFamily: MONO, fontSize: 10.5, letterSpacing: ".12em", textTransform: "uppercase", color: "#8C6A55", marginBottom: 8 }}>
+              <Clock size={14} strokeWidth={2} color="currentColor" />
               Right now · 2:40 PM · 3 h until dinner
             </div>
             <p style={{ margin: "0 0 14px", fontSize: 15, color: "var(--wl-ink-2)" }}>
               You&rsquo;re 400 m from Librairie Bertrand and the rain starts in 20 minutes. Books, then
               coffee next door, keeps you $12 under today.
             </p>
-            <button onClick={() => router.push("/place")} style={{ border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 14, fontWeight: 700, padding: "12px 20px", borderRadius: 999, width: "100%", maxWidth: 280 }}>
+            <button onClick={() => router.push("/place")} style={{ border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 14, fontWeight: 700, padding: "12px 20px", borderRadius: 999, width: "100%", maxWidth: 280, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <Sparkles size={16} strokeWidth={2} color="currentColor" />
               What should I do right now?
             </button>
           </div>

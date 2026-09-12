@@ -2,10 +2,24 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { BookOpen, Coffee, Compass, House, Landmark, Moon, Tag, Utensils } from "lucide-react";
 import { CATEGORIES, PLACES } from "@/lib/mock/ui";
 import { ImageSlot } from "@/components/ImageSlot";
+import { slugify } from "@/lib/slug";
 import { photoFor } from "@/lib/photos";
 import { MONO, SERIF } from "@/components/ui";
+
+/** One icon per filter chip; anything unmapped simply renders without one. */
+const CATEGORY_ICONS: Record<string, typeof Compass> = {
+  All: Compass,
+  History: Landmark,
+  Food: Utensils,
+  Cafés: Coffee,
+  Bookstores: BookOpen,
+  Indoor: House,
+  Free: Tag,
+  Nightlife: Moon,
+};
 
 /** Same filter the design uses — matches on the copy, since these are mock places. */
 function matches(cat: string, p: (typeof PLACES)[number]) {
@@ -41,6 +55,7 @@ export default function Explore() {
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
         {CATEGORIES.map((label) => {
           const on = cat === label;
+          const Icon = CATEGORY_ICONS[label];
           return (
             <button
               key={label}
@@ -53,8 +68,12 @@ export default function Explore() {
                 borderRadius: 999,
                 background: on ? "#17150F" : "#FFFFFF",
                 color: on ? "#FBF8F3" : "#6B6458",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 7,
               }}
             >
+              {Icon && <Icon size={16} strokeWidth={2} color="currentColor" />}
               {label}
             </button>
           );
@@ -65,7 +84,7 @@ export default function Explore() {
         {filtered.map((p, i) => (
           <button
             key={p.name}
-            onClick={() => router.push("/place")}
+            onClick={() => router.push(`/place/${slugify(p.name)}`)}
             style={{
               textAlign: "left",
               border: "1px solid var(--wl-line)",

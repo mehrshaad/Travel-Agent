@@ -2,8 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ArrowLeft, ArrowRight, Footprints, Gauge, Utensils } from "lucide-react";
 import { INTERESTS, PARSED, PICKERS, STEP_COPY } from "@/lib/mock/ui";
 import { MONO, SERIF } from "@/components/ui";
+
+/** One icon per preference picker, keyed the same way PICKERS is. */
+const PICKER_ICONS = { pace: Gauge, walk: Footprints, dinner: Utensils };
 
 export default function Onboarding() {
   const router = useRouter();
@@ -76,8 +80,8 @@ export default function Onboarding() {
                 gap: 4,
               }}
             >
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#231052", animation: "wl-blink 4s infinite" }} />
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#231052", animation: "wl-blink 4s infinite" }} />
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#231052", animation: "wl-blink 5.2s infinite", animationDelay: "2.4s" }} />
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#231052", animation: "wl-blink 5.2s infinite", animationDelay: "2.4s" }} />
             </div>
             <div>
               <div style={{ fontSize: 15, fontWeight: 700 }}>Atlas</div>
@@ -158,9 +162,11 @@ export default function Onboarding() {
             <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
               {PICKERS.map((g) => {
                 const [value, set] = picked[g.key];
+                const Icon = PICKER_ICONS[g.key];
                 return (
                   <div key={g.label}>
-                    <div style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--wl-muted)", marginBottom: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 7, fontFamily: MONO, fontSize: 10.5, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--wl-muted)", marginBottom: 10 }}>
+                      <Icon size={14} strokeWidth={2} color="currentColor" />
                       {g.label}
                     </div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -202,11 +208,13 @@ export default function Onboarding() {
           )}
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "space-between", alignItems: "center", marginTop: 26 }}>
-            <button onClick={back} style={{ border: "1px solid #E4DBCC", background: "#FFF", fontSize: 14, fontWeight: 700, padding: "12px 18px", borderRadius: 999 }}>
+            <button onClick={back} style={{ border: "1px solid #E4DBCC", background: "#FFF", fontSize: 14, fontWeight: 700, padding: "12px 18px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <ArrowLeft size={16} strokeWidth={2} color="currentColor" />
               {step === 1 ? "Back to prompt" : "Back"}
             </button>
-            <button onClick={next} style={{ border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 14.5, fontWeight: 700, padding: "13px 24px", borderRadius: 999 }}>
+            <button onClick={next} style={{ border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 14.5, fontWeight: 700, padding: "13px 24px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8 }}>
               {step < 4 ? "Continue" : "Dispatch the crew"}
+              <ArrowRight size={16} strokeWidth={2} color="currentColor" />
             </button>
           </div>
         </div>

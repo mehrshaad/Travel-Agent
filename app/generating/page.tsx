@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ArrowRight, MapPin } from "lucide-react";
 import { CREW } from "@/lib/mock/ui";
 import { MONO, SERIF } from "@/components/ui";
 
@@ -37,7 +38,8 @@ export default function Generating() {
     >
       <div style={{ width: "min(100%,720px)" }}>
         <div style={{ textAlign: "center", marginBottom: 34 }}>
-          <div style={{ fontFamily: MONO, fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: "var(--wl-muted)", marginBottom: 14 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 7, fontFamily: MONO, fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: "var(--wl-muted)", marginBottom: 14 }}>
+            <MapPin size={14} strokeWidth={2} color="currentColor" />
             Montreal · Sep 15–19 · $150/day
           </div>
           <h2 style={{ margin: 0, fontFamily: SERIF, fontWeight: 400, fontSize: "clamp(30px,4.6vw,46px)", lineHeight: 1.1 }}>
@@ -60,6 +62,11 @@ export default function Generating() {
           {CREW.map((a, i) => {
             const status = genStep > i + 1 ? "done" : genStep === i + 1 ? "working…" : "queued";
             const statusColor = genStep > i + 1 ? "#1FA39A" : genStep === i + 1 ? "#E0603C" : "#6B6458";
+            // Every third agent winks (one eye) instead of blinking, and each gets its own
+            // delay/duration so the crew never blinks in unison. Derived from i, so it is stable.
+            const wink = i % 3 === 2;
+            const eyeDur = `${(3.6 + (i % 5) * 0.6).toFixed(1)}s`;
+            const eyeDelay = `${((i * 1.7) % 5).toFixed(1)}s`;
             return (
               <div key={a.name} style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 10px", borderBottom: "1px solid #F3EDE3" }}>
                 <div
@@ -76,8 +83,8 @@ export default function Generating() {
                     background: a.color,
                   }}
                 >
-                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: "rgba(0,0,0,.62)", animation: "wl-blink 4s infinite" }} />
-                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: "rgba(0,0,0,.62)", animation: "wl-blink 4s infinite" }} />
+                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: "rgba(0,0,0,.62)", animation: wink ? "none" : `wl-blink ${eyeDur} infinite`, animationDelay: eyeDelay }} />
+                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: "rgba(0,0,0,.62)", animation: `${wink ? "wl-wink" : "wl-blink"} ${eyeDur} infinite`, animationDelay: eyeDelay }} />
                 </div>
                 <div style={{ flex: "1 1 220px", minWidth: 0 }}>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "baseline" }}>
@@ -99,8 +106,9 @@ export default function Generating() {
               <span style={{ width: 15, height: 15, borderRadius: "50%", border: "2px solid #EDE5D8", borderTopColor: "#E0603C", animation: "wl-spin .9s linear infinite" }} />
               Atlas is resolving conflicts between food and walking distance
             </div>
-            <button onClick={() => router.push("/today")} style={{ border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 14, fontWeight: 700, padding: "11px 20px", borderRadius: 999 }}>
+            <button onClick={() => router.push("/today")} style={{ border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 14, fontWeight: 700, padding: "11px 20px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8 }}>
               Skip to trip
+              <ArrowRight size={16} strokeWidth={2} color="currentColor" />
             </button>
           </div>
         </div>

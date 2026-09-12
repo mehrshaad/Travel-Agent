@@ -1,10 +1,14 @@
+import { Footprints, Navigation, Ticket, Train } from "lucide-react";
 import { LEGS, PASSES, TRANSPORT } from "@/lib/mock/ui";
 import { Eyebrow, MONO, SERIF } from "@/components/ui";
 
 export default function GetAround() {
   return (
     <div style={{ animation: "wl-screen .46s cubic-bezier(.22,.68,.16,1) both", maxWidth: 1120, margin: "0 auto" }}>
-      <Eyebrow style={{ marginBottom: 7 }}>Dash · 12 legs costed this morning</Eyebrow>
+      <Eyebrow style={{ marginBottom: 7, display: "flex", alignItems: "center", gap: 7 }}>
+        <Navigation size={14} strokeWidth={2} color="currentColor" />
+        Dash · 12 legs costed this morning
+      </Eyebrow>
       <h1 style={{ margin: "0 0 6px", fontFamily: SERIF, fontWeight: 400, fontSize: "clamp(28px,3.6vw,40px)", lineHeight: 1.05 }}>
         Getting around, priced honestly
       </h1>
@@ -15,7 +19,10 @@ export default function GetAround() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 18, marginBottom: 18 }}>
         <div style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 24, padding: "6px 20px 16px" }}>
-          <Eyebrow style={{ padding: "16px 0 6px" }}>Today&rsquo;s legs</Eyebrow>
+          <Eyebrow style={{ padding: "16px 0 6px", display: "flex", alignItems: "center", gap: 7 }}>
+            <Footprints size={14} strokeWidth={2} color="currentColor" />
+            Today&rsquo;s legs
+          </Eyebrow>
           {LEGS.map((l) => (
             <div key={l.from + l.to} style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", padding: "13px 0", borderTop: "1px solid #F3EDE3" }}>
               <span style={{ flex: "0 0 auto", width: 9, height: 9, borderRadius: "50%", background: l.color }} />
@@ -35,7 +42,10 @@ export default function GetAround() {
 
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <div style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 24, padding: 20 }}>
-            <Eyebrow style={{ marginBottom: 14 }}>Next leg · to Damas, 19:00</Eyebrow>
+            <Eyebrow style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 7 }}>
+              <Train size={14} strokeWidth={2} color="currentColor" />
+              Next leg · to Damas, 19:00
+            </Eyebrow>
             {TRANSPORT.map((r) => (
               <div key={r.mode} style={{ display: "flex", gap: 12, alignItems: "center", padding: "11px 0", borderTop: "1px solid #F3EDE3" }}>
                 <span style={{ flex: "1 1 auto", fontSize: 14.5, fontWeight: 700 }}>{r.mode}</span>
@@ -49,7 +59,10 @@ export default function GetAround() {
           </div>
 
           <div style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 24, padding: 20 }}>
-            <Eyebrow style={{ marginBottom: 14 }}>Passes in your pocket</Eyebrow>
+            <Eyebrow style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 7 }}>
+              <Ticket size={14} strokeWidth={2} color="currentColor" />
+              Passes in your pocket
+            </Eyebrow>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {PASSES.map((p) => (
                 <div key={p.name} style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>

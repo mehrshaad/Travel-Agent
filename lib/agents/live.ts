@@ -114,10 +114,12 @@ export function buildNow(
   const first = top[0];
   const rainSoon = weather && !weather.outdoorFriendly;
 
+  const mins = first?.travelTime?.minutes ?? 5;
+  const walk = mins <= 1 ? "A minute's walk" : `${mins} minutes`;
   const headline = rainSoon
     ? `Rain around ${weather!.time.slice(11, 16)} — here's what still works.`
     : first
-      ? `${first.travelTime?.minutes ?? 5} minutes from something worth your time.`
+      ? `${walk} from something worth your time.`
       : "Nothing open nearby right now.";
 
   const narrative = first
