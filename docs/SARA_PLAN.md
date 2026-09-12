@@ -471,3 +471,118 @@ clean, and `mock: true` makes no network calls at all.
 - Commit style: `feat(b): add Overpass POI provider with tile cache`
 - No AI attribution in commits.
 - **Blocked >20 min → say so.** Especially on Overpass throttling or an Exa surprise.
+
+---
+
+## Open requirements — answered by lead
+
+All five were real, and all five were defects in files I own, not misreadings on your side.
+Thank you for stopping and writing them down instead of improvising around the contract —
+that is exactly the behaviour rule §1 was meant to produce.
+
+**The contract changes are already on `main`.** Rebase before continuing:
+
+```bash
+git pull --rebase origin main
+```
+
+### B3 — geocoding timezone · RESOLVED
+
+You were right: `geocode()` had no way to obtain a value its own return type requires.
+
+`types/providers.ts` now declares `GeocodeDeps` and `GeocodeProviderFactory`. Export your
+geocoder as a **factory** taking `{ resolveTimezone }`; `createProviders()` passes the weather
+provider's `timezoneFor`. So `nominatim.ts` still never imports `openMeteo.ts` — the dependency
+arrives at construction instead of through the call signature.
+
+### B4 — category interests · RESOLVED
+
+My fault: the table ended in an ellipsis and left 27 of 30 categories undefined.
+
+The **full canonical table is now in task B4 above**. Use it verbatim. An empty list is a valid
+answer for stay, transport and essentials categories — those are looked up on demand, never
+ranked by interest. `free` means "costs nothing to enter", not "cheap".
+
+### B5 — public-holiday opening hours · RESOLVED
+
+Confirmed by running it. The example tag **in my own plan** throws:
+
+```
+new opening_hours("Mo-Fr 09:00-12:00,13:00-17:00; PH off")
+  → Error: Country code missing which is needed to select the correct holidays
+```
+
+So the string-only converter I specified could not have worked. `PlaceSearchQuery.countryCode`
+now carries ISO 3166-1 alpha-2 (lowercase), sourced from `Destination.country`. Pass a
+nominatim-shaped second argument:
+
+```ts
+new OpeningHours(raw, { address: { country_code: countryCode }, lat, lon })
+```
+
+When `countryCode` is absent, a tag containing `PH`/`SH` must degrade to `{ unknown: true }` —
+never throw.
+
+### B7 — weather forecast trip ID · RESOLVED
+
+`WeatherForecast.tripId` is now **optional**. A forecast is trip-agnostic, so the provider
+genuinely cannot know it; the API layer attaches it. Do **not** add a `tripId` parameter to
+`forecast()`.
+
+### B11 — provider environment contract · RESOLVED
+
+`ProviderEnv` is now declared in `types/providers.ts` with `EXA_API_KEY`, `EXA_BUDGET_USD`,
+`EXA_SOFT_CAP_RATIO`, `NOMINATIM_USER_AGENT` and `MOCK_MODE`. Signature is
+`createProviders(env: ProviderEnv)`. Read `process.env` at the edge and pass the object in —
+providers must never touch `process.env` themselves.
+
+---
+
+## Review of B1 + B2
+
+Both are good. The host queue, the retry rules, the abort handling and the `ToolCall`
+reporting all match the spec, and `requestJson` correctly distinguishes a caller abort from a
+timeout. Two things to fix, then B1/B2 can merge.
+
+### 1. `DiskCache` will silently never work in production — fix before B9
+
+`this.directory = join(".cache", namespace)` writes relative to cwd. **We deployed to Vercel
+today, and serverless filesystems are read-only except `/tmp`.** Combined with `set()` catching
+every error and discarding it:
+
+```ts
+} catch {}
+```
+
+…the cache will fail invisibly in production, every lookup will miss, and **every Exa query
+will be a fresh $0.007 charge**. That is the one failure mode that costs us real money, and it
+would look exactly like "the cache just isn't helping much".
+
+Please:
+- Take the cache root from `ProviderEnv` or an explicit constructor argument, defaulting to
+  `.cache` locally and `/tmp/.cache` when `process.env.VERCEL` is set.
+- Do not swallow write errors silently. Log once per process, and reflect it in `stats()` so
+  the usage meter can show that caching is degraded.
+
+### 2. Exa pricing does not belong in `http.ts`
+
+```ts
+...(opts.tool === "exa_search" ? { costUsd: 0.007 } : {})
+```
+
+$0.007 is the price of `type: "auto"` only — `deep` is $12–15 per 1k, roughly double. Pricing
+knowledge in the generic HTTP wrapper will quietly go wrong the moment anyone changes search
+type. Let callers pass `costUsd` through `fetchJson` and set it in `exa.ts`, where the search
+type is known.
+
+### Smaller notes — your call, not blockers
+
+- `stats().entries` counts only keys touched **this process**, so it reports 0 after a restart
+  even with a full cache on disk. Fine if the usage meter only needs hit rate.
+- Expired entries are read, rejected, and left on disk forever. `.cache` grows unbounded.
+  Harmless for a hackathon; worth a sweep on startup if it is cheap.
+- `HttpStatusError` discards the response body. Overpass puts its actual error text in the
+  body, so B6 will be much easier to debug if you keep the first ~200 characters.
+- 429 is not retried. That matches the spec I wrote, but 429 is the *common* failure from both
+  Nominatim and Overpass. If you hit it in B6, tell me and we will change the rule rather than
+  you working around it.
