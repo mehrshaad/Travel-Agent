@@ -9,3 +9,5 @@ dist/
 .DS_Store
 .vercel
 *.tsbuildinfo
+.env*
+!.env.example
