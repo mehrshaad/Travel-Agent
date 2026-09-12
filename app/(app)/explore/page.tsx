@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CATEGORIES, PLACES } from "@/lib/mock/ui";
 import { ImageSlot } from "@/components/ImageSlot";
+import { photoFor } from "@/lib/photos";
 import { MONO, SERIF } from "@/components/ui";
 
 /** Same filter the design uses — matches on the copy, since these are mock places. */
@@ -79,7 +80,7 @@ export default function Explore() {
             }}
           >
             <div style={{ position: "relative", height: 132 }}>
-              <ImageSlot placeholder={p.slot} radius={0} style={{ position: "absolute", inset: 0 }} />
+              <ImageSlot placeholder={p.slot} photo={photoFor(p.name)} radius={0} style={{ position: "absolute", inset: 0 }} />
               <span style={{ position: "absolute", right: 10, top: 10, padding: "5px 10px", borderRadius: 999, background: "#FFF", fontSize: 11, fontWeight: 800, pointerEvents: "none", color: p.agentColor }}>
                 {p.agent}
               </span>

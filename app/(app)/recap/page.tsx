@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { HIGHLIGHTS, LEARNED, NEXT_TRIPS, RECAP_STATS } from "@/lib/mock/ui";
 import { ImageSlot } from "@/components/ImageSlot";
+import { photo } from "@/lib/photos";
 import { Eyebrow, MONO, SERIF } from "@/components/ui";
 
 export default function Recap() {
@@ -35,8 +36,8 @@ export default function Recap() {
         <div style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 24, padding: 20 }}>
           <Eyebrow style={{ marginBottom: 14 }}>The five you&rsquo;d do again</Eyebrow>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(120px,1fr))", gap: 10, marginBottom: 16 }}>
-            {[1, 2, 3, 4].map((n) => (
-              <ImageSlot key={n} placeholder="Photo" radius={14} style={{ display: "block", height: 92 }} />
+            {["pointe-a-calliere", "persian-food", "bookstore", "notre-dame"].map((slug) => (
+              <ImageSlot key={slug} placeholder="Photo" photo={photo(slug)} radius={14} style={{ display: "block", height: 92 }} />
             ))}
           </div>
           {HIGHLIGHTS.map((h) => (

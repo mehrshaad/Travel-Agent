@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { ALTS, TRANSPORT } from "@/lib/mock/ui";
 import { ImageSlot } from "@/components/ImageSlot";
+import { photo, photoFor } from "@/lib/photos";
 import { MapFrame } from "@/components/MapFrame";
 import { Eyebrow, MONO, SERIF } from "@/components/ui";
 
@@ -23,10 +24,10 @@ export default function PlaceDetail() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 20 }}>
         <div>
-          <ImageSlot placeholder="Drop bookstore photo · 3:2" radius={24} style={{ display: "block", width: "100%", height: "clamp(220px,30vw,320px)" }} />
+          <ImageSlot placeholder="Librairie Bertrand" photo={photoFor("Librairie Bertrand")} radius={24} style={{ display: "block", width: "100%", height: "clamp(220px,30vw,320px)" }} />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginTop: 10 }}>
-            {[1, 2, 3].map((n) => (
-              <ImageSlot key={n} placeholder="Photo" radius={14} style={{ display: "block", height: 76 }} />
+            {["drawn-quarterly", "cafe-interior", "old-montreal"].map((slug) => (
+              <ImageSlot key={slug} placeholder="Photo" photo={photo(slug)} radius={14} style={{ display: "block", height: 76 }} />
             ))}
           </div>
           <div style={{ border: "1px solid var(--wl-line)", borderRadius: 20, overflow: "hidden", marginTop: 14, background: "#FFF" }}>
@@ -108,7 +109,7 @@ export default function PlaceDetail() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(230px,1fr))", gap: 14 }}>
           {ALTS.map((a) => (
             <div key={a.name} style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 20, overflow: "hidden" }}>
-              <ImageSlot placeholder="Photo" radius={0} style={{ display: "block", height: 92 }} />
+              <ImageSlot placeholder={a.name} photo={photoFor(a.name)} radius={0} style={{ display: "block", height: 92 }} />
               <div style={{ padding: 14 }}>
                 <div style={{ fontSize: 15, fontWeight: 700 }}>{a.name}</div>
                 <div style={{ fontSize: 12.5, color: "var(--wl-muted)", marginTop: 3 }}>{a.meta}</div>

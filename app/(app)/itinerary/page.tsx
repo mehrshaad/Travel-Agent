@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { DAY_TABS, PLANS, QUESTIONS } from "@/lib/mock/ui";
 import { ImageSlot } from "@/components/ImageSlot";
+import { photoFor } from "@/lib/photos";
 import { MapFrame } from "@/components/MapFrame";
 import { Eyebrow, MONO, SERIF } from "@/components/ui";
 
@@ -97,7 +98,7 @@ export default function Itinerary() {
           <div style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 24, padding: 20 }}>
             <Eyebrow style={{ marginBottom: 14 }}>Where you&rsquo;re sleeping</Eyebrow>
             <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-              <ImageSlot placeholder="Drop hotel photo" radius={16} style={{ flex: "0 0 96px", height: 96 }} />
+              <ImageSlot placeholder="Hôtel Nelligan" photo={photoFor("Hôtel Nelligan")} radius={16} style={{ flex: "0 0 96px", height: 96 }} />
               <div style={{ flex: "1 1 180px", minWidth: 0 }}>
                 <div style={{ fontSize: 16, fontWeight: 700 }}>Hôtel Nelligan</div>
                 <div style={{ fontSize: 13, color: "var(--wl-muted)", marginTop: 3 }}>

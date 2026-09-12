@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { BOOKINGS, SAVES } from "@/lib/mock/ui";
 import { ImageSlot } from "@/components/ImageSlot";
+import { photoFor } from "@/lib/photos";
 import { Eyebrow, SERIF } from "@/components/ui";
 
 export default function Saved() {
@@ -46,7 +47,7 @@ export default function Saved() {
                 onClick={() => router.push("/place")}
                 style={{ textAlign: "left", border: "1px solid var(--wl-line)", background: "#FFF", borderRadius: 18, overflow: "hidden", padding: 0 }}
               >
-                <ImageSlot placeholder="Photo" radius={0} style={{ display: "block", height: 78 }} />
+                <ImageSlot placeholder={s.name} photo={photoFor(s.name)} radius={0} style={{ display: "block", height: 78 }} />
                 <div style={{ padding: "12px 13px 14px" }}>
                   <div style={{ fontSize: 14, fontWeight: 700 }}>{s.name}</div>
                   <div style={{ fontSize: 12, color: "var(--wl-muted)", marginTop: 3 }}>{s.meta}</div>

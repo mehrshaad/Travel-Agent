@@ -283,6 +283,12 @@ export default function Landing() {
           </div>
         ))}
       </div>
+
+      <div style={{ padding: "0 clamp(18px,4vw,54px) 26px" }}>
+        <Link href="/credits" style={{ fontSize: 12.5, color: "var(--wl-muted)" }}>
+          Photo credits &amp; map data
+        </Link>
+      </div>
     </div>
   );
 }

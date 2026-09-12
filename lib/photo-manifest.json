@@ -1,0 +1,205 @@
+{
+  "pointe-a-calliere": {
+    "src": "/photos/pointe-a-calliere.jpg",
+    "artist": "Lumaag",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Pointe-%C3%A0-Calli%C3%A8re_Mariners%27_House.jpg",
+    "specific": true
+  },
+  "chateau-ramezay": {
+    "src": "/photos/chateau-ramezay.jpg",
+    "artist": "Joanne Lévesque",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Ch%C3%A2teau_Ramezay,_Vieux-Montr%C3%A9al.jpg",
+    "specific": true
+  },
+  "jean-talon-market": {
+    "src": "/photos/jean-talon-market.jpg",
+    "artist": "Andre Carrotflower",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:20160904_-_03_-_Montreal_(Little_Italy).jpg",
+    "specific": true
+  },
+  "casino-montreal": {
+    "src": "/photos/casino-montreal.jpg",
+    "artist": "Igor Galx",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Casino_De_Montreal_(219955723).jpeg",
+    "specific": true
+  },
+  "schwartzs": {
+    "src": "/photos/schwartzs.jpg",
+    "artist": "Guilhem Vellut from Annecy, France",
+    "license": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Line_@_Schwartz%27s_Deli_@_Le_Plateau_@_Montr%C3%A9al_(30455248981).jpg",
+    "specific": true
+  },
+  "habitat-67": {
+    "src": "/photos/habitat-67.jpg",
+    "artist": "Ralf Roletschek",
+    "license": "GFDL 1.2",
+    "source": "https://commons.wikimedia.org/wiki/File:17-08-islcanus-RalfR-DSC_4150.jpg",
+    "specific": true
+  },
+  "notre-dame": {
+    "src": "/photos/notre-dame.jpg",
+    "artist": "Diego Delso",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Bas%C3%ADlica_de_Notre-Dame,_Montreal,_Canad%C3%A1,_2017-08-12,_DD_01-03_HDR.jpg",
+    "specific": true
+  },
+  "mount-royal": {
+    "src": "/photos/mount-royal.jpg",
+    "artist": "Wilfredor",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Kondiaronk_Belvedere,_Montreal_city,_Canada.jpg",
+    "specific": true
+  },
+  "mmfa": {
+    "src": "/photos/mmfa.jpg",
+    "artist": "Fontaoj",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Montreal_Museum_of_Fine_Arts.jpg",
+    "specific": true
+  },
+  "st-viateur": {
+    "src": "/photos/st-viateur.jpg",
+    "artist": "Jeangagnon",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:St-Viateur_Bagel_-_263_Saint-Viateur_Ouest.jpg",
+    "specific": true
+  },
+  "old-montreal": {
+    "src": "/photos/old-montreal.jpg",
+    "artist": "Tydziedzic",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Driven_to_Sustain_Van_in_Old_Montreal.jpg",
+    "specific": true
+  },
+  "place-jacques-cartier": {
+    "src": "/photos/place-jacques-cartier.jpg",
+    "artist": "Unknown authorUnknown author",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:1979-07_Place_Jacques-Cartier.jpg",
+    "specific": true
+  },
+  "mile-end": {
+    "src": "/photos/mile-end.jpg",
+    "artist": "Andre Carrotflower",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:20181013_-_01_-_Montreal_(Mile_End).jpg",
+    "specific": true
+  },
+  "griffintown": {
+    "src": "/photos/griffintown.jpg",
+    "artist": "MartinLangelier",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Facade_NewCityGas.jpg",
+    "specific": true
+  },
+  "old-port": {
+    "src": "/photos/old-port.jpg",
+    "artist": "0x010C",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2016-10_Montreal_25.jpg",
+    "specific": true
+  },
+  "bota-bota": {
+    "src": "/photos/bota-bota.jpg",
+    "artist": "Dennis G. Jarvis",
+    "license": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:DSC00085_-_Bota_Bota_(48152579936).jpg",
+    "specific": false
+  },
+  "drawn-quarterly": {
+    "src": "/photos/drawn-quarterly.jpg",
+    "artist": "Not on display",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Drawn_and_Quarterly_Bookstore,_Mile_End,_Montreal.jpg",
+    "specific": true
+  },
+  "hotel-nelligan": {
+    "src": "/photos/hotel-nelligan.jpg",
+    "artist": "Jeangagnon",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:1001_rue_Saint-Hubert_-_01.jpg",
+    "specific": false
+  },
+  "auberge-vieux-port": {
+    "src": "/photos/auberge-vieux-port.jpg",
+    "artist": "Ken Lund from Reno, Nevada, USA",
+    "license": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Place_Jacques-Cartier,_Vieux-Montr%C3%A9al,_Montreal,_Quebec_(29440151264).jpg",
+    "specific": true
+  },
+  "hotel-gault": {
+    "src": "/photos/hotel-gault.jpg",
+    "artist": "Thomas1313",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Gault_Brothers_%26_Co._Store_and_Warehouse_Building_(Montreal)_3.JPG",
+    "specific": true
+  },
+  "bookstore": {
+    "src": "/photos/bookstore.jpg",
+    "artist": "Ingolfson",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Bookshop_%27Shakespeare%27,_Centre_Paris_II.jpg",
+    "specific": false
+  },
+  "persian-food": {
+    "src": "/photos/persian-food.jpg",
+    "artist": "Anagoria",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:20240809_Kabab_koobideh_%26_Kabuli_Pulao_Restaurant_Safrani_Berlin_anagoria.jpg",
+    "specific": false
+  },
+  "cafe-interior": {
+    "src": "/photos/cafe-interior.jpg",
+    "artist": "Josep M. Gracia",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BV_-_Counter_and_interior_of_Aux_Folies_cafe_in_Belleville,_Paris,_2017.jpg",
+    "specific": false
+  },
+  "restaurant-table": {
+    "src": "/photos/restaurant-table.jpg",
+    "artist": "Borra Jiangs",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BJ_%E5%8C%97%E4%BA%AC_Tour_Beijing_%E5%B5%97%E5%90%89%E5%BA%9C%E9%A4%90%E5%BB%B3_restaurant_Chinese_table_setting_Aug-2010.JPG",
+    "specific": false
+  },
+  "hostel-dorm": {
+    "src": "/photos/hostel-dorm.jpg",
+    "artist": "Sgroey",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Hostel_6-bed_dorm_room,_Kuching,_Malaysia.jpg",
+    "specific": false
+  },
+  "hotel-room": {
+    "src": "/photos/hotel-room.jpg",
+    "artist": "Nightscream",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:6.13.08ABQMarriotPyramidRoomByLuigiNovi8.jpg",
+    "specific": false
+  },
+  "ice-cream": {
+    "src": "/photos/ice-cream.jpg",
+    "artist": "Julian Osley",
+    "license": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:-2020-09-14_Windows_Ice_Cream,_New_Street,_Cromer,_Norfolk.jpg",
+    "specific": false
+  },
+  "record-shop": {
+    "src": "/photos/record-shop.jpg",
+    "artist": "Tomasz Sienicki [user: tsca, mail: tomasz.sienicki at gmail.com]",
+    "license": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2nd_Hand_Record_Store,_Flensburg,_2012,_ubt.JPG",
+    "specific": false
+  },
+  "cafe-olimpico": {
+    "src": "/photos/cafe-interior.jpg",
+    "artist": "Josep M. Gracia",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:BV_-_Counter_and_interior_of_Aux_Folies_cafe_in_Belleville,_Paris,_2017.jpg",
+    "specific": false
+  }
+}

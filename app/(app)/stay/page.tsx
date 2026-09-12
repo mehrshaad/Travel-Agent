@@ -1,5 +1,6 @@
 import { STAYS } from "@/lib/mock/ui";
 import { ImageSlot } from "@/components/ImageSlot";
+import { photoFor } from "@/lib/photos";
 import { Eyebrow, MONO, SERIF } from "@/components/ui";
 
 const FACTS = [
@@ -22,7 +23,7 @@ export default function Stay() {
 
       <div style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 24, overflow: "hidden", marginBottom: 20 }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))" }}>
-          <ImageSlot placeholder="Drop hotel photo · 4:3" radius={0} style={{ display: "block", minHeight: 230 }} />
+          <ImageSlot placeholder="Hôtel Nelligan" photo={photoFor("Hôtel Nelligan")} radius={0} style={{ display: "block", minHeight: 230 }} />
           <div style={{ padding: "clamp(18px,2vw,26px)" }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
               <span style={{ padding: "6px 12px", borderRadius: 999, background: "#EAF4F2", color: "#0F6F68", fontSize: 12, fontWeight: 700 }}>
@@ -62,7 +63,7 @@ export default function Stay() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(250px,1fr))", gap: 16 }}>
         {STAYS.map((h) => (
           <div key={h.name} style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 22, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-            <ImageSlot placeholder="Photo" radius={0} style={{ display: "block", height: 118 }} />
+            <ImageSlot placeholder={h.name} photo={photoFor(h.name)} radius={0} style={{ display: "block", height: 118 }} />
             <div style={{ padding: 15, display: "flex", flexDirection: "column", gap: 7, flex: 1 }}>
               <div style={{ display: "flex", gap: 8, justifyContent: "space-between", alignItems: "baseline" }}>
                 <span style={{ fontSize: 15.5, fontWeight: 700 }}>{h.name}</span>
