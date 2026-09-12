@@ -32,7 +32,7 @@ export function createProviders(env: Env): ProviderRegistry
 ## Setup
 
 ```bash
-git checkout -b lane-b/providers
+git checkout -b lane-b/b1-cache
 npm install
 cp .env.example .env.local   # fill EXA_API_KEY, set NOMINATIM_USER_AGENT
 npm run typecheck
@@ -418,6 +418,8 @@ clean, and `mock: true` makes no network calls at all.
 
 - **Never edit `types/`.** Wrong signature → message Ali.
 - **Never edit `lib/agents/` or `lib/llm/`** — those are Paria's.
+- **One branch per task**, not one per lane — `lane-b/<task>`. Merge it as soon as
+  the task is done. A branch open longer than a day is too big; split it. See `AGENTS.md` §6.
 - Rebase on `main` twice a day: `git pull --rebase origin main`
 - Commit style: `feat(b): add Overpass POI provider with tile cache`
 - No AI attribution in commits.

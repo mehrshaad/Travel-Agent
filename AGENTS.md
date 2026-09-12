@@ -99,18 +99,89 @@ agent, and an agent must never wait on a working provider.
 
 ---
 
-## 6. Git
+## 6. Branches, merging, deploy
 
-- **Never commit to `main`.** No exceptions, including one-line fixes.
-- Branch: `lane-<a|b|c>/<short-desc>` → `lane-b/overpass-provider`
-- **Rebase, never merge**: `git pull --rebase origin main`
-- **Rebase onto `main` at least twice a day.** A branch that hasn't been rebased since
-  morning is a conflict waiting to happen.
-- **Small PRs.** One feature. If a PR touches more than ~8 files, split it.
-- PRs need one approval — but do not sit blocked waiting. Ping, then continue on a
-  branch stacked on yours.
+Everyone works on their own branch. Nothing is ever written directly to `main`. Branches
+merge into `main` through a PR, and `main` is what deploys.
 
-**Commit format**: `<type>(<lane>): <what changed>`
+### One branch per task — not one per lane
+
+```
+lane-a/<task>     Ali      lane-a/today-screen
+lane-b/<task>     Sara     lane-b/b6-overpass
+lane-c/<task>     Paria    lane-c/c1-llm-client
+```
+
+**Name the branch after the task, not the lane.** A single `lane-b/providers` branch that
+lives for three days accumulates every change you made and turns into one enormous merge at
+the worst possible moment. One branch per task from `docs/<YOUR>_PLAN.md`, merged as soon as
+that task is done, keeps every merge boring.
+
+**A branch should live hours, not days.** If it has been open longer than a day, it is too big —
+split it and merge what already works.
+
+### The loop
+
+```
+git checkout main
+git pull --rebase origin main          # always start from current main
+git checkout -b lane-b/b6-overpass
+   … do the one task …
+npm run typecheck                      # must pass before you push
+git push -u origin lane-b/b6-overpass
+   … open a PR into main …
+```
+
+- **Rebase, never merge**: `git pull --rebase origin main`, at least twice a day even
+  mid-task. Conflicts found early are small.
+- Because the lanes own disjoint directories, you should almost never conflict with each
+  other. When you do, it will be in a shared file — see §5.
+- **Small PRs.** One task. More than ~8 files means split it.
+- One approval, then **squash merge** into `main`. Squash keeps `main` readable: one commit
+  per task instead of fourteen "wip" commits.
+- Delete the branch after merge.
+
+### Do not sit blocked waiting for review
+
+Ping for review, then keep going. If your next task builds on the branch under review, branch
+off your own branch and say so in the PR — do not idle, and do not start a second copy of the
+work on `main`.
+
+### Who merges
+
+Anyone can merge their own PR once it has an approval and `typecheck` passes. The lead merges
+anything that touches shared files or looks cross-lane.
+
+### Integration checkpoints
+
+Twice a day, everyone merges whatever is green. **Integration is where "it worked on my branch"
+goes to die**, so we do it repeatedly and in small pieces rather than once at the end. A
+hackathon project that integrates for the first time on the final evening does not ship.
+
+### Deploy
+
+`main` deploys. That is the whole rule — so `main` must always build.
+
+- **Vercel**, free tier, imported from this repo. Zero config for Next.js.
+- Every PR gets its own **preview URL** automatically. Put it in the PR so a reviewer can click
+  the actual screen rather than reading a diff and imagining it.
+- Merging to `main` deploys production.
+- **Environment variables go in the Vercel project settings, never in the repo.**
+  `OPENROUTER_API_KEY`, `EXA_API_KEY`, `NOMINATIM_USER_AGENT`. A key in a commit on a public
+  repo is compromised the moment it is pushed — rotate it, do not just delete the line.
+- **Before the demo, deploy and open the production URL on a phone.** Do not discover on stage
+  that the build works locally and breaks on Vercel.
+
+### Never
+
+- Commit to `main` directly. No exceptions, including one-line fixes.
+- Force-push `main`. If history is wrong, we live with it — rewriting a shared branch breaks
+  everyone's clone, and a tidy log is worth less than a working repo.
+- Merge a branch whose `typecheck` fails. Broken `main` blocks all three of us and breaks deploy.
+
+### Commit format
+
+`<type>(<lane>): <what changed>`
 
 ```
 feat(b): add Overpass POI provider with tile cache
@@ -120,10 +191,8 @@ chore: pin openrouter sdk
 
 Types: `feat` `fix` `chore` `docs` `refactor` `test`
 
-**Never add AI attribution to commits or PRs.** No `Co-Authored-By: Claude`,
-no "Generated with", no agent trailers of any kind. This is a hard rule.
-
----
+**Never add AI attribution to commits or PRs.** No `Co-Authored-By: Claude`, no "Generated
+with", no agent trailers of any kind. This is a hard rule.
 
 ## 7. Definition of done
 

@@ -41,6 +41,8 @@ Hard rules for this session:
    hackathon codebase; the minimum correct code wins.
 7. Never commit an API key. Secrets live in `.env.local`, which is gitignored.
 8. Never add AI attribution to commits (no "Co-Authored-By", no "Generated with").
+9. Work on a branch named `lane-b/<task>` — one branch per task, never one per lane.
+   NEVER commit to `main`, and never force-push anything.
 
 Project constraints that shape every decision:
 - All providers must DEGRADE, never throw. If an upstream API is down or rate-limited,
@@ -334,3 +336,36 @@ lead to change, not us.
 
 > Team rule: blocked more than 20 minutes → message the team. Grinding alone is the
 > most expensive thing you can do in a hackathon.
+
+## §5 Finishing a task — open the PR
+
+```
+The task is done and self-review is clean. Walk me through shipping it:
+
+1. Run `npm run typecheck`. If it fails, stop and fix it — a branch that does not typecheck
+   must never be merged, because `main` is what deploys.
+2. Show me `git status` and `git diff --stat` so I can confirm nothing outside
+   lib/providers/ and lib/cache/ changed.
+3. Rebase onto the latest main:
+   git pull --rebase origin main
+   If there are conflicts, show them to me — do NOT resolve conflicts in a file outside my
+   lane on your own, and never resolve a lockfile conflict by hand.
+4. Commit with our format: `<type>(b): <what changed>`, e.g.
+   `feat(b): add Overpass POI provider with tile cache`.
+   No AI attribution lines of any kind.
+5. Push the branch and give me the PR URL.
+
+Then write a short PR description for me containing:
+- what the task was, in one line
+- anything I should know that is not obvious from the diff
+- how you verified it (which script you ran, what it printed)
+- anything you could NOT verify
+
+Keep it short. Do not pad it.
+```
+
+Once the PR is open, paste its **Vercel preview URL** into the PR description — a reviewer
+should be able to click the actual page instead of reading the diff and imagining it.
+
+**Then merge it and move on.** Do not batch several finished tasks into one big merge later;
+merge each task as soon as it is green. See `AGENTS.md` §6.

@@ -29,7 +29,7 @@ You do not edit `types/`. Wrong signature → message Ali.
 ## Setup
 
 ```bash
-git checkout -b lane-c/agents
+git checkout -b lane-c/c0-fake-providers
 npm install
 cp .env.example .env.local   # fill OPENROUTER_API_KEY
 npm run typecheck
@@ -322,6 +322,8 @@ companion rather than a search box.
 - **Never edit `types/`.** Wrong signature → message Ali.
 - **Never edit `lib/providers/` or `lib/cache/`** — those are Sara's.
 - **Never import from `lib/providers/`** — use `ctx.providers`.
+- **One branch per task**, not one per lane — `lane-c/<task>`. Merge it as soon as
+  the task is done. A branch open longer than a day is too big; split it. See `AGENTS.md` §6.
 - Rebase twice a day: `git pull --rebase origin main`
 - Commit style: `feat(c): add personalizer signal folding with changeLog`
 - No AI attribution in commits.
