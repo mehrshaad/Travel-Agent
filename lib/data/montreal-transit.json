@@ -1,0 +1,666 @@
+{
+  "city": "Montréal",
+  "operator": "Société de transport de Montréal",
+  "mode": "subway",
+  "source": "OpenStreetMap via Overpass",
+  "fetchedAt": "2026-09-12",
+  "lines": [
+    {
+      "ref": "1",
+      "name": "Ligne verte vers Honoré-Beaugrand",
+      "colour": "#069037",
+      "terminus": "Honoré-Beaugrand",
+      "stations": [
+        "Angrignon",
+        "Monk",
+        "Jolicoeur",
+        "Verdun",
+        "De l'Église",
+        "LaSalle",
+        "Charlevoix",
+        "Lionel-Groulx",
+        "Atwater",
+        "Guy-Concordia",
+        "Peel",
+        "McGill",
+        "Place-des-Arts",
+        "Saint-Laurent",
+        "Berri-UQAM",
+        "Beaudry",
+        "Papineau",
+        "Frontenac",
+        "Préfontaine",
+        "Joliette",
+        "Pie IX",
+        "Viau",
+        "Assomption",
+        "Cadillac",
+        "Langelier",
+        "Radisson",
+        "Honoré-Beaugrand"
+      ]
+    },
+    {
+      "ref": "2",
+      "name": "Ligne orange vers Montmorency",
+      "colour": "#D06D07",
+      "terminus": "Montmorency",
+      "stations": [
+        "Côte-Vertu",
+        "Du Collège",
+        "De La Savane",
+        "Namur",
+        "Plamondon",
+        "Côte-Sainte-Catherine",
+        "Snowdon",
+        "Villa-Maria",
+        "Vendôme",
+        "Place Saint-Henri",
+        "Lionel-Groulx",
+        "Georges-Vanier",
+        "Lucien-L'Allier",
+        "Bonaventure",
+        "Square-Victoria-OACI",
+        "Place d’Armes",
+        "Champ-de-Mars",
+        "Berri-UQAM",
+        "Sherbrooke",
+        "Mont-Royal",
+        "Laurier",
+        "Rosemont",
+        "Beaubien",
+        "Jean-Talon",
+        "Jarry",
+        "Crémazie",
+        "Sauvé",
+        "Henri-Bourassa",
+        "Cartier",
+        "De la Concorde",
+        "Montmorency"
+      ]
+    },
+    {
+      "ref": "4",
+      "name": "Ligne jaune vers Berri-UQAM",
+      "colour": "#F1CE00",
+      "terminus": "Berri-UQAM",
+      "stations": [
+        "Longueuil–Université-de-Sherbrooke",
+        "Jean-Drapeau",
+        "Berri-UQAM"
+      ]
+    },
+    {
+      "ref": "5",
+      "name": "Ligne bleue vers Saint-Michel",
+      "colour": "#3465B4",
+      "terminus": "Saint-Michel",
+      "stations": [
+        "Snowdon",
+        "Côte-des-Neiges",
+        "Université-de-Montréal",
+        "Édouard-Montpetit",
+        "Outremont",
+        "Acadie",
+        "Parc",
+        "De Castelnau",
+        "Jean-Talon",
+        "Fabre",
+        "D’Iberville",
+        "Saint-Michel"
+      ]
+    }
+  ],
+  "stops": [
+    {
+      "name": "Viau",
+      "lat": 45.5612107,
+      "lng": -73.547217
+    },
+    {
+      "name": "Jean-Drapeau",
+      "lat": 45.5124354,
+      "lng": -73.533166
+    },
+    {
+      "name": "Université-de-Montréal",
+      "lat": 45.5034516,
+      "lng": -73.6175641
+    },
+    {
+      "name": "Guy-Concordia",
+      "lat": 45.4953505,
+      "lng": -73.5798146
+    },
+    {
+      "name": "Peel",
+      "lat": 45.5005644,
+      "lng": -73.5750245
+    },
+    {
+      "name": "McGill",
+      "lat": 45.5040687,
+      "lng": -73.5715335
+    },
+    {
+      "name": "Place-des-Arts",
+      "lat": 45.5080372,
+      "lng": -73.5683367
+    },
+    {
+      "name": "Saint-Laurent",
+      "lat": 45.5109236,
+      "lng": -73.5648225
+    },
+    {
+      "name": "Atwater",
+      "lat": 45.4896787,
+      "lng": -73.5863126
+    },
+    {
+      "name": "Charlevoix",
+      "lat": 45.4783949,
+      "lng": -73.5693747
+    },
+    {
+      "name": "Papineau",
+      "lat": 45.5240492,
+      "lng": -73.5529443
+    },
+    {
+      "name": "Côte-des-Neiges",
+      "lat": 45.4966415,
+      "lng": -73.6234712
+    },
+    {
+      "name": "Snowdon",
+      "lat": 45.4863416,
+      "lng": -73.628346
+    },
+    {
+      "name": "Édouard-Montpetit",
+      "lat": 45.510131,
+      "lng": -73.612563
+    },
+    {
+      "name": "Acadie",
+      "lat": 45.5232203,
+      "lng": -73.6237717
+    },
+    {
+      "name": "Parc",
+      "lat": 45.5304337,
+      "lng": -73.6244545
+    },
+    {
+      "name": "De Castelnau",
+      "lat": 45.5352841,
+      "lng": -73.6200292
+    },
+    {
+      "name": "Fabre",
+      "lat": 45.5467272,
+      "lng": -73.607922
+    },
+    {
+      "name": "D’Iberville",
+      "lat": 45.5530778,
+      "lng": -73.6022739
+    },
+    {
+      "name": "Saint-Michel",
+      "lat": 45.5597648,
+      "lng": -73.5998596
+    },
+    {
+      "name": "Frontenac",
+      "lat": 45.5329932,
+      "lng": -73.552479
+    },
+    {
+      "name": "Préfontaine",
+      "lat": 45.541717,
+      "lng": -73.5542209
+    },
+    {
+      "name": "Joliette",
+      "lat": 45.5468903,
+      "lng": -73.5511268
+    },
+    {
+      "name": "Jolicoeur",
+      "lat": 45.4567578,
+      "lng": -73.5820354
+    },
+    {
+      "name": "Monk",
+      "lat": 45.4511015,
+      "lng": -73.5937306
+    },
+    {
+      "name": "Assomption",
+      "lat": 45.5691651,
+      "lng": -73.5472116
+    },
+    {
+      "name": "Cadillac",
+      "lat": 45.5768391,
+      "lng": -73.5467179
+    },
+    {
+      "name": "Langelier",
+      "lat": 45.5827497,
+      "lng": -73.5431832
+    },
+    {
+      "name": "Radisson",
+      "lat": 45.5891558,
+      "lng": -73.53942
+    },
+    {
+      "name": "Honoré-Beaugrand",
+      "lat": 45.5964086,
+      "lng": -73.5354197
+    },
+    {
+      "name": "Pie IX",
+      "lat": 45.5542002,
+      "lng": -73.5515006
+    },
+    {
+      "name": "Berri-UQAM",
+      "lat": 45.5144053,
+      "lng": -73.5618861
+    },
+    {
+      "name": "LaSalle",
+      "lat": 45.4710284,
+      "lng": -73.5662452
+    },
+    {
+      "name": "De l'Église",
+      "lat": 45.4626906,
+      "lng": -73.5670272
+    },
+    {
+      "name": "Angrignon",
+      "lat": 45.4462277,
+      "lng": -73.603611
+    },
+    {
+      "name": "Champ-de-Mars",
+      "lat": 45.510082,
+      "lng": -73.5564161
+    },
+    {
+      "name": "Côte-Vertu",
+      "lat": 45.5143583,
+      "lng": -73.6829881
+    },
+    {
+      "name": "De La Savane",
+      "lat": 45.5002999,
+      "lng": -73.6616085
+    },
+    {
+      "name": "Namur",
+      "lat": 45.4948911,
+      "lng": -73.6529005
+    },
+    {
+      "name": "Plamondon",
+      "lat": 45.4944027,
+      "lng": -73.6377945
+    },
+    {
+      "name": "Côte-Sainte-Catherine",
+      "lat": 45.492303,
+      "lng": -73.6328648
+    },
+    {
+      "name": "Villa-Maria",
+      "lat": 45.4797593,
+      "lng": -73.6197408
+    },
+    {
+      "name": "Vendôme",
+      "lat": 45.4739256,
+      "lng": -73.6037929
+    },
+    {
+      "name": "Place Saint-Henri",
+      "lat": 45.4774122,
+      "lng": -73.5863885
+    },
+    {
+      "name": "Georges-Vanier",
+      "lat": 45.488977,
+      "lng": -73.5765137
+    },
+    {
+      "name": "Bonaventure",
+      "lat": 45.4982692,
+      "lng": -73.5670909
+    },
+    {
+      "name": "Square-Victoria-OACI",
+      "lat": 45.5020325,
+      "lng": -73.5631239
+    },
+    {
+      "name": "Place d’Armes",
+      "lat": 45.5060568,
+      "lng": -73.5597499
+    },
+    {
+      "name": "Sherbrooke",
+      "lat": 45.5179664,
+      "lng": -73.5672253
+    },
+    {
+      "name": "Mont-Royal",
+      "lat": 45.5247175,
+      "lng": -73.5814435
+    },
+    {
+      "name": "Laurier",
+      "lat": 45.5282239,
+      "lng": -73.5886089
+    },
+    {
+      "name": "Rosemont",
+      "lat": 45.5315669,
+      "lng": -73.5974076
+    },
+    {
+      "name": "Beaubien",
+      "lat": 45.535046,
+      "lng": -73.6049607
+    },
+    {
+      "name": "Crémazie",
+      "lat": 45.5460056,
+      "lng": -73.6389251
+    },
+    {
+      "name": "Sauvé",
+      "lat": 45.5509304,
+      "lng": -73.6562673
+    },
+    {
+      "name": "Longueuil–Université-de-Sherbrooke",
+      "lat": 45.5249501,
+      "lng": -73.5219712
+    },
+    {
+      "name": "Lionel-Groulx",
+      "lat": 45.4825279,
+      "lng": -73.5802721
+    },
+    {
+      "name": "Du Collège",
+      "lat": 45.5083969,
+      "lng": -73.6732971
+    },
+    {
+      "name": "Berri-UQAM",
+      "lat": 45.5149459,
+      "lng": -73.5613355
+    },
+    {
+      "name": "Berri-UQAM",
+      "lat": 45.5154378,
+      "lng": -73.5614278
+    },
+    {
+      "name": "Jean-Talon",
+      "lat": 45.5389736,
+      "lng": -73.6141724
+    },
+    {
+      "name": "Jean-Talon",
+      "lat": 45.5391609,
+      "lng": -73.6145711
+    },
+    {
+      "name": "Lucien-L'Allier",
+      "lat": 45.4949933,
+      "lng": -73.5709676
+    },
+    {
+      "name": "Jarry",
+      "lat": 45.5431669,
+      "lng": -73.6287573
+    },
+    {
+      "name": "Snowdon",
+      "lat": 45.4862467,
+      "lng": -73.6278481
+    },
+    {
+      "name": "Outremont",
+      "lat": 45.5200867,
+      "lng": -73.6149036
+    },
+    {
+      "name": "Villa-Maria",
+      "lat": 45.479736,
+      "lng": -73.6197742
+    },
+    {
+      "name": "Côte-Sainte-Catherine",
+      "lat": 45.4922801,
+      "lng": -73.632891
+    },
+    {
+      "name": "Snowdon",
+      "lat": 45.4862538,
+      "lng": -73.6278924
+    },
+    {
+      "name": "Henri-Bourassa",
+      "lat": 45.5548614,
+      "lng": -73.6677661
+    },
+    {
+      "name": "Vendôme",
+      "lat": 45.4738964,
+      "lng": -73.6037723
+    },
+    {
+      "name": "Monk",
+      "lat": 45.4510613,
+      "lng": -73.5937138
+    },
+    {
+      "name": "Angrignon",
+      "lat": 45.4462029,
+      "lng": -73.6035778
+    },
+    {
+      "name": "Jolicoeur",
+      "lat": 45.45675,
+      "lng": -73.5819839
+    },
+    {
+      "name": "Verdun",
+      "lat": 45.4594567,
+      "lng": -73.5731629
+    },
+    {
+      "name": "Verdun",
+      "lat": 45.4594242,
+      "lng": -73.5731663
+    },
+    {
+      "name": "De l'Église",
+      "lat": 45.4626889,
+      "lng": -73.5669888
+    },
+    {
+      "name": "Beaudry",
+      "lat": 45.5195426,
+      "lng": -73.5571619
+    },
+    {
+      "name": "Montmorency",
+      "lat": 45.5586949,
+      "lng": -73.722023
+    },
+    {
+      "name": "De la Concorde",
+      "lat": 45.5607253,
+      "lng": -73.7094627
+    },
+    {
+      "name": "Cartier",
+      "lat": 45.5599494,
+      "lng": -73.6819932
+    },
+    {
+      "name": "Henri-Bourassa",
+      "lat": 45.5543256,
+      "lng": -73.668064
+    },
+    {
+      "name": "Montmorency",
+      "lat": 45.5586729,
+      "lng": -73.7220007
+    },
+    {
+      "name": "De la Concorde",
+      "lat": 45.5606992,
+      "lng": -73.709453
+    },
+    {
+      "name": "Cartier",
+      "lat": 45.5599283,
+      "lng": -73.6820171
+    },
+    {
+      "name": "Côte-Vertu",
+      "lat": 45.5143381,
+      "lng": -73.6830136
+    },
+    {
+      "name": "Du Collège",
+      "lat": 45.5083758,
+      "lng": -73.6733209
+    },
+    {
+      "name": "De La Savane",
+      "lat": 45.5002797,
+      "lng": -73.661634
+    },
+    {
+      "name": "Plamondon",
+      "lat": 45.49438,
+      "lng": -73.6378151
+    },
+    {
+      "name": "Namur",
+      "lat": 45.4948697,
+      "lng": -73.6529239
+    },
+    {
+      "name": "Georges-Vanier",
+      "lat": 45.4889678,
+      "lng": -73.5764776
+    },
+    {
+      "name": "Champ-de-Mars",
+      "lat": 45.5100683,
+      "lng": -73.556383
+    },
+    {
+      "name": "Place d’Armes",
+      "lat": 45.5060432,
+      "lng": -73.5597167
+    },
+    {
+      "name": "Square-Victoria-OACI",
+      "lat": 45.5020169,
+      "lng": -73.5630925
+    },
+    {
+      "name": "Bonaventure",
+      "lat": 45.4982525,
+      "lng": -73.5670607
+    },
+    {
+      "name": "Lucien-L'Allier",
+      "lat": 45.4949761,
+      "lng": -73.570938
+    },
+    {
+      "name": "Place Saint-Henri",
+      "lat": 45.4773879,
+      "lng": -73.5863721
+    },
+    {
+      "name": "Lionel-Groulx",
+      "lat": 45.4822216,
+      "lng": -73.5803438
+    },
+    {
+      "name": "Mont-Royal",
+      "lat": 45.5247402,
+      "lng": -73.5814227
+    },
+    {
+      "name": "Sherbrooke",
+      "lat": 45.5179891,
+      "lng": -73.5672045
+    },
+    {
+      "name": "Berri-UQAM",
+      "lat": 45.5154605,
+      "lng": -73.5614071
+    },
+    {
+      "name": "Sauvé",
+      "lat": 45.5509554,
+      "lng": -73.656253
+    },
+    {
+      "name": "Crémazie",
+      "lat": 45.5460306,
+      "lng": -73.6389107
+    },
+    {
+      "name": "Jarry",
+      "lat": 45.5431919,
+      "lng": -73.6287429
+    },
+    {
+      "name": "Jean-Talon",
+      "lat": 45.5389987,
+      "lng": -73.6141582
+    },
+    {
+      "name": "Beaubien",
+      "lat": 45.5350686,
+      "lng": -73.6049398
+    },
+    {
+      "name": "Rosemont",
+      "lat": 45.5315898,
+      "lng": -73.5973872
+    },
+    {
+      "name": "Laurier",
+      "lat": 45.5282465,
+      "lng": -73.5885879
+    },
+    {
+      "name": "Lionel-Groulx",
+      "lat": 45.4825068,
+      "lng": -73.5803048
+    },
+    {
+      "name": "Lionel-Groulx",
+      "lat": 45.4822413,
+      "lng": -73.5803701
+    }
+  ]
+}
