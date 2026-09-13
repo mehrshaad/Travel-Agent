@@ -420,7 +420,7 @@ export default function Today() {
         <div>
           <Eyebrow style={{ marginBottom: 7, display: "flex", alignItems: "center", gap: 7 }}>
             <CalendarDays size={14} strokeWidth={2} color="currentColor" />
-            Day 2 of 4 · Tuesday, Sep 16
+            {heading.eyebrow}
           </Eyebrow>
           <h1 style={{ margin: 0, fontFamily: SERIF, fontWeight: 400, fontSize: "clamp(30px,4vw,44px)", lineHeight: 1.05 }}>
             {heading.title}
@@ -511,7 +511,7 @@ export default function Today() {
             </div>
           </div>
           <div style={{ position: "relative", height: "clamp(300px,38vw,420px)", background: "#EFEAE1" }}>
-            <MapFrame query={`day=2&mode=${mode}&order=${order.join(",")}`} title={`Day 2 route through Montreal — ${mode}`} />
+            <MapFrame query={mapQuery} title={`${trip?.destination.city ?? "Montreal"} route — ${mode}`} />
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, padding: "14px 18px", borderTop: "1px solid #F3EDE3", background: "var(--wl-bg)" }}>
             {(plan
