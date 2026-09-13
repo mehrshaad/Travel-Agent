@@ -275,14 +275,23 @@ export default function Today() {
   const planRequested = useRef(false);
 
   useEffect(() => {
-    if (planRequested.current) return;
+    // Wait for the itinerary so the legs are costed against the real stops.
+    if (planRequested.current || (itinerary && !day)) return;
     planRequested.current = true;
     setPlanning(true);
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 25000);
 
-    fetch("/api/trips/trip_montreal_demo/legs", { signal: controller.signal })
+    fetch(`/api/trips/${currentTripId()}/legs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({
+        stops: day?.items.map((i) => ({ name: i.place.name, coords: i.place.coords })) ?? null,
+        currency: trip?.preferences.dailyBudget.currency ?? "CAD",
+      }),
+    })
       .then((r) => r.json())
       .then((b) => setPlan(b?.ok ? (b.data as LegsResponse) : null))
       .catch(() => {
@@ -293,7 +302,7 @@ export default function Today() {
         clearTimeout(timer);
         setPlanning(false);
       });
-  }, []);
+  }, [day, trip, itinerary]);
 
   /**
    * A drag that never fires dragend — cancelled with Escape, dropped outside the list,
@@ -492,7 +501,7 @@ export default function Today() {
         </div>
         <div style={{ flex: "1 1 300px", minWidth: 0 }}>
           <div style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: ".12em", textTransform: "uppercase", color: "#9C9482", marginBottom: 6 }}>
-            {advisory ? `Nimbus · ${advisory.headline}` : "Nimbus + Atlas · adapted 12 min ago"}
+            {advisory ? advisory.headline : "Nimbus + Atlas · adapted 12 min ago"}
           </div>
           <p style={{ margin: 0, fontSize: "clamp(15px,1.3vw,17px)", lineHeight: 1.5 }}>
             {advisory ? (

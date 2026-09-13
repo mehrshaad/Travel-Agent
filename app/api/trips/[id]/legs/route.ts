@@ -49,6 +49,11 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
 }
 
 async function handle(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  // The browser sends its own stops: on serverless the instance holding the itinerary is
+  // rarely the one answering, so relying on the store gave everyone the Montreal demo.
+  const sent = (await _req
+    .json()
+    .catch(() => null)) as { stops?: { name: string; coords: LatLng }[]; currency?: string } | null;
   const started = Date.now();
   const { id } = await ctx.params;
   if (!knownTrip(id)) return fail({ code: "not_found", message: `No trip ${id}` }, started);
@@ -60,9 +65,13 @@ async function handle(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const dayIndex = Number(new URL(_req.url).searchParams.get("day") ?? 1) - 1;
   const day = itinerary?.days[Math.max(0, Math.min(dayIndex, (itinerary?.days.length ?? 1) - 1))];
   const stops =
-    day && day.items.length > 1
-      ? day.items.map((i) => ({ name: i.place.name, coords: i.place.coords }))
-      : DEMO_DAY;
+    sent?.stops && sent.stops.length > 1
+      ? sent.stops
+      : day && day.items.length > 1
+        ? day.items.map((i) => ({ name: i.place.name, coords: i.place.coords }))
+        : DEMO_DAY;
+
+  const currency = sent?.currency ?? "CAD";
 
   const legs = await Promise.all(
     stops.slice(0, -1).map(async (from, i) => {
@@ -107,7 +116,7 @@ async function handle(_req: Request, ctx: { params: Promise<{ id: string }> }) {
               .join(" · "),
             minutes: transit.totalMinutes,
             time: hhmm(transit.totalMinutes),
-            cost: `$${transit.fare.amount.toFixed(2)}`,
+            cost: `${transit.fare.amount.toFixed(2)} ${currency}`,
           };
 
       const taxiRow =
@@ -137,9 +146,9 @@ async function handle(_req: Request, ctx: { params: Promise<{ id: string }> }) {
     legs.reduce((acc, l) => acc + (l[mode].kind === "walk" ? l.metres : 0), 0);
 
   const totals = {
-    walk: { onFoot: km(onFoot("walk")), moving: hhmm(sum("walk")), fares: "$0" },
-    transit: { onFoot: km(onFoot("transit")), moving: hhmm(sum("transit")), fares: `$${fares("transit").toFixed(2)}` },
-    taxi: { onFoot: km(onFoot("taxi")), moving: hhmm(sum("taxi")), fares: `≈$${fares("taxi").toFixed(0)}` },
+    walk: { onFoot: km(onFoot("walk")), moving: hhmm(sum("walk")), fares: `0 ${currency}` },
+    transit: { onFoot: km(onFoot("transit")), moving: hhmm(sum("transit")), fares: `${fares("transit").toFixed(2)} ${currency}` },
+    taxi: { onFoot: km(onFoot("taxi")), moving: hhmm(sum("taxi")), fares: `≈${fares("taxi").toFixed(0)} ${currency}` },
   };
 
   return ok({ legs, totals }, started, { usage: p.usage() });
