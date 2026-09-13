@@ -18,7 +18,7 @@ const DEMO_CURRENCY = "CAD";
 
 const FACTS = [
   ["Walk score", "96 / 100", "var(--wl-ink)"],
-  ["Stops within 1.2 km", "9 of 14", "var(--wl-ink)"],
+  ["Stops within 1.2 km", "6 of 20", "var(--wl-ink)"],
   ["Transport saved", `${money(19, DEMO_CURRENCY)} / day`, "#0F6F68"],
 ];
 

@@ -257,7 +257,7 @@ export default function Itinerary() {
                   Old Montreal · 4.6 ★ · $186/night
                 </div>
                 <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--wl-muted)" }}>
-                  Nest picked it: walkable to 9 of your 14 stops, which is why transport is only $3.35
+                  Nest picked it: a short walk from most of the plan, which is why transport is only $3.35
                   today.
                 </p>
               </div>

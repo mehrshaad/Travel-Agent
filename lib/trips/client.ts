@@ -124,7 +124,13 @@ export async function planTrip(id: string) {
 
 /** Cached first — the server may not have this trip on the instance that answers. */
 export async function fetchTrip(id: string) {
-  return cache<Trip>(TRIP_KEY) ?? (await call<Trip>(`/api/trips/${id}`));
+  const held = cache<Trip>(TRIP_KEY);
+  if (held) return held;
+  // Cache what the server hands back. Without this the demo trip was never written to
+  // session storage, so askCrew posted a null trip and every message on /chat failed.
+  const fetched = await call<Trip>(`/api/trips/${id}`);
+  if (fetched) cache(TRIP_KEY, fetched);
+  return fetched;
 }
 
 export async function fetchItinerary(id: string) {

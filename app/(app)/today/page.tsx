@@ -43,6 +43,17 @@ const BADGES: Record<LegRow["kind"], { bg: string; fg: string; color: string }> 
   taxi: { bg: "#FDEDEA", fg: "#A83A22", color: "#E0603C" },
 };
 
+/** The day being travelled, in the destination's own timezone — not simply the first. */
+function dayNow(itinerary: Itinerary | null, trip: Trip | null) {
+  const days = itinerary?.days ?? [];
+  if (!days.length) return undefined;
+  const tz = trip?.destination.timezone;
+  const here = tz
+    ? new Date().toLocaleDateString("en-CA", { timeZone: tz })
+    : new Date().toISOString().slice(0, 10);
+  return days.find((d) => d.date === here) ?? days[0];
+}
+
 const MODE_NOTE: Record<Mode, string> = {
   walk: "Every leg on foot. Honest about what that costs you in time.",
   transit: "Lines, stations and interchanges from OpenStreetMap. Fares are modelled where no feed exists.",
@@ -114,7 +125,7 @@ export default function Today() {
 
   /** The generated day, mapped onto the shape this screen already renders. */
   const stops = useMemo(() => {
-    const day = itinerary?.days[0];
+    const day = dayNow(itinerary, trip);
 
     if (!day || day.items.length === 0) return showSeed ? TODAY : [];
     return day.items.map((item) => ({
@@ -156,7 +167,7 @@ export default function Today() {
   const [dragging, setDragging] = useState<number | null>(null);
   const [mode, setMode] = useState<Mode>("transit");
 
-  const day = itinerary?.days[0];
+  const day = dayNow(itinerary, trip);
 
   // Nimbus, for this city: a real proposal when the forecast warrants one, and an honest
   // "nothing to change" when it does not.

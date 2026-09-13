@@ -37,7 +37,7 @@ export default function Saved() {
       </h1>
       <p style={{ margin: "0 0 22px", color: "var(--wl-muted)", fontSize: 15.5, maxWidth: "62ch" }}>
         {showSeed
-          ? "Nine saves, four bookings. Atlas will slot the saves into gaps automatically unless you pin a time."
+          ? `${saves.length} saves, ${bookings.length} bookings. Atlas will slot the saves into gaps automatically unless you pin a time.`
           : `Nothing booked or saved${city ? ` in ${city}` : ""} yet. Anything you confirm or save keeps its place here, and Atlas slots the saves into gaps unless you pin a time.`}
       </p>
 

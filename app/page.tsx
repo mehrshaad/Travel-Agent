@@ -7,7 +7,7 @@ import { ArrowRight, CloudRain, Sparkles } from "lucide-react";
 import { EXAMPLES } from "@/lib/mock/ui";
 import { money } from "@/lib/money";
 import { factsIn, rememberNeeds } from "@/lib/profile";
-import { createTrip, rememberTrip } from "@/lib/trips/client";
+import { clearCurrentTrip, createTrip, rememberTrip } from "@/lib/trips/client";
 import { RouteProgress } from "@/components/RouteProgress";
 import type { CreateTripResult } from "@/types";
 import { MONO, SERIF } from "@/components/ui";
@@ -157,6 +157,7 @@ export default function Landing() {
           </Link>
           <Link
             href="/today"
+            onClick={() => clearCurrentTrip()}
             style={{
               border: "1px solid #E4DBCC",
               background: "#FFF",
