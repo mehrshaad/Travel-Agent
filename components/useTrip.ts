@@ -49,13 +49,17 @@ export function useTrip() {
      */
     demo,
     /**
-     * Seeded content is safe to show; otherwise wait or say the plan is missing.
+     * Seeded content is safe to show.
      *
-     * Gated on `loaded` as well: the trip id is only readable after mount, so the first
+     * Gated on `loaded` because the trip id is only readable after mount, so the first
      * frame used to paint Montreal for everyone and then correct itself. A screen that
      * waits one tick is better than one that shows the wrong city, however briefly.
+     *
+     * Not gated on the itinerary: the demo trip HAS one, and excluding it meant the demo
+     * lost every seeded stay, leg, essential and transaction the moment its own plan
+     * arrived — the one trip where that content is the point.
      */
-    showSeed: loaded && demo && !itinerary,
+    showSeed: loaded && demo,
   };
 }
 

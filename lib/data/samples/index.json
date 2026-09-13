@@ -1,0 +1,14 @@
+{
+ "generatedAt": "2026-09-12",
+ "cities": [
+  {
+   "slug": "porto-pt",
+   "city": "Porto",
+   "country": "Portugal",
+   "countryCode": "pt",
+   "lat": 41.1496,
+   "lng": -8.6109,
+   "count": 152
+  }
+ ]
+}

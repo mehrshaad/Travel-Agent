@@ -167,11 +167,15 @@
 
   function drawPath(path) {
     var riding = path.kind === 'ride';
+    // Only in transit mode is a walk a minor thing — the hop to and from the platform,
+    // drawn quietly so the line itself reads. In walking and taxi mode the single path
+    // that comes back IS the route, and it wears the mode's own line.
+    var access = !riding && MODE === 'transit';
     var line = L.polyline(path.points, {
-      color: path.provisional ? style.color : riding ? (path.colour || style.color) : '#17150F',
-      weight: path.provisional ? 2.5 : riding ? 5 : 2.5,
-      opacity: path.provisional ? .5 : riding ? .9 : .45,
-      dashArray: path.provisional ? '3 9' : riding ? null : '6 6'
+      color: path.provisional ? style.color : riding ? (path.colour || style.color) : access ? '#17150F' : style.color,
+      weight: path.provisional ? 2.5 : riding ? 5 : access ? 2.5 : style.weight,
+      opacity: path.provisional ? .5 : riding ? .9 : access ? .45 : style.opacity,
+      dashArray: path.provisional ? '3 9' : riding ? null : access ? '6 6' : style.dashArray
     }).addTo(map);
     if (path.label) {
       line.bindPopup('<div class="wl-pop"><b>' + esc(path.label) + '</b><span>' +
@@ -228,7 +232,7 @@
         html: '<div class="wl-pin" style="background:' + s.color + '">' + (single ? '★' : i + 1) + '</div>',
         iconSize: [28, 28], iconAnchor: [14, 14]
       })
-    }).addTo(map).bindPopup('<div class="wl-pop"><b>' + s.name + '</b><span>' + s.note + '</span></div>');
+    }).addTo(map).bindPopup('<div class="wl-pop"><b>' + esc(s.name) + '</b><span>' + esc(s.note) + '</span></div>');
   });
 
   if (single) map.setView(stops[0].ll, 16);
