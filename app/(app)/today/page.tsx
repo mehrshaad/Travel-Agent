@@ -593,9 +593,13 @@ export default function Today() {
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "baseline", justifyContent: "space-between", padding: "14px 0 4px" }}>
               <Eyebrow>
                 Directions ·{" "}
-                {mode === "walk" ? "walking only" : mode === "transit" ? "STM transit" : "taxi / rideshare"}
+                {mode === "walk" ? "walking only" : mode === "transit" ? "transit" : "taxi / rideshare"}
               </Eyebrow>
-              <span style={{ fontSize: 12.5, color: "var(--wl-muted)" }}>{MODE_NOTE[mode]}</span>
+              <span style={{ fontSize: 12.5, color: "var(--wl-muted)" }}>
+                {mode === "transit" && plan?.legs[0]?.transit.badge === "Walk instead"
+                  ? "No metro network mapped for this city yet — walking and taxi only."
+                  : MODE_NOTE[mode]}
+              </span>
             </div>
 
             {planning && !plan && (

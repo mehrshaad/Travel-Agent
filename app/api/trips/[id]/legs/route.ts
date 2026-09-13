@@ -1,5 +1,4 @@
-import { fail, ok } from "@/lib/api/respond";
-import { knownTrip } from "@/lib/api/guard";
+import { ok } from "@/lib/api/respond";
 import { providers, trace } from "@/lib/providers";
 import { planTransit } from "@/lib/transit";
 import { haversineMeters } from "@/lib/providers/normalize";
@@ -56,7 +55,8 @@ async function handle(_req: Request, ctx: { params: Promise<{ id: string }> }) {
     .catch(() => null)) as { stops?: { name: string; coords: LatLng }[]; currency?: string } | null;
   const started = Date.now();
   const { id } = await ctx.params;
-  if (!knownTrip(id)) return fail({ code: "not_found", message: `No trip ${id}` }, started);
+  // Answers from the stops the client sends, so it must not require server state.
+  void id;
 
   const p = providers();
 
