@@ -94,46 +94,6 @@ export default function Today() {
   const stops = useMemo(() => {
     const day = itinerary?.days[0];
 
-  // Nimbus, for this city: a real proposal when the forecast warrants one, and an honest
-  // "nothing to change" when it does not.
-  const [advisory, setAdvisory] = useState<{ headline: string; body: string } | null>(null);
-  const [rightNow, setRightNow] = useState<{ headline: string; narrative: string } | null>(null);
-
-  useEffect(() => {
-    const coords = trip?.destination.coords;
-    if (!coords) return;
-    const qs = `lat=${coords.lat}&lng=${coords.lng}`;
-
-    fetch(`/api/trips/${currentTripId()}/replan/live?${qs}`)
-      .then((r) => r.json())
-      .then((b) => {
-        if (!b?.ok) return;
-        const event = b.data.event;
-        setAdvisory(
-          event
-            ? { headline: event.observation, body: event.decision }
-            : {
-                headline: `Nimbus checked ${trip.destination.city}`,
-                body: b.data.reason ?? "Nothing in today's weather is worth rewriting the day for.",
-              },
-        );
-      })
-      .catch(() => setAdvisory(null));
-
-    fetch(`/api/trips/${currentTripId()}/now`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: coords,
-        remaining: trip.preferences.dailyBudget.amount,
-      }),
-    })
-      .then((r) => r.json())
-      .then((b) => {
-        if (b?.ok) setRightNow({ headline: b.data.headline, narrative: b.data.narrative });
-      })
-      .catch(() => setRightNow(null));
-  }, [trip]);
     if (!day || day.items.length === 0) return TODAY;
     return day.items.map((item) => ({
       time: item.startTime.slice(11, 16),
