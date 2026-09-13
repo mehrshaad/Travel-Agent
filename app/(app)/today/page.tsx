@@ -73,6 +73,8 @@ export default function Today() {
   // the screen is never empty on a cold open.
   const [trip, setTrip] = useState<Trip | null>(null);
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
+  /** False until the trip lookup has settled, so nothing requests with half the facts. */
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const id = currentTripId();
@@ -81,6 +83,7 @@ export default function Today() {
       if (!live) return;
       if (t) setTrip(t);
       if (i) setItinerary(i);
+      setLoaded(true);
     });
     return () => {
       live = false;
@@ -275,8 +278,9 @@ export default function Today() {
   const planRequested = useRef(false);
 
   useEffect(() => {
-    // Wait for the itinerary so the legs are costed against the real stops.
-    if (planRequested.current || (itinerary && !day)) return;
+    // Wait until the trip lookup has settled. Firing earlier sent no stops, so the
+    // server fell back to the Montreal demo and the panel showed the wrong city.
+    if (!loaded || planRequested.current) return;
     planRequested.current = true;
     setPlanning(true);
 
@@ -302,7 +306,7 @@ export default function Today() {
         clearTimeout(timer);
         setPlanning(false);
       });
-  }, [day, trip, itinerary]);
+  }, [loaded, day, trip]);
 
   /**
    * A drag that never fires dragend — cancelled with Escape, dropped outside the list,
