@@ -61,7 +61,29 @@
   };
 
   var q = new URLSearchParams(location.search);
-  var stops = q.get('place') ? (PLACES[q.get('place')] || PLACES.bertrand) : (DAYS[q.get('day')] || DAYS[2]);
+
+  // ?stops=lat,lng,name|lat,lng,name — any city. The seeded Montreal days remain the
+  // fallback so the demo trip still works with no parameters.
+  var custom = null;
+  var raw = q.get('stops');
+  if (raw) {
+    custom = raw.split('|').map(function (part, i) {
+      var bits = part.split(',');
+      var lat = parseFloat(bits[0]), lng = parseFloat(bits[1]);
+      if (!isFinite(lat) || !isFinite(lng)) return null;
+      return {
+        name: decodeURIComponent(bits.slice(2).join(',') || ('Stop ' + (i + 1))),
+        note: '',
+        ll: [lat, lng],
+        color: [CORAL, AMBER, TEAL, VIOLET, SAND][i % 5]
+      };
+    }).filter(Boolean);
+    if (!custom.length) custom = null;
+  }
+
+  var stops = custom
+    ? custom
+    : q.get('place') ? (PLACES[q.get('place')] || PLACES.bertrand) : (DAYS[q.get('day')] || DAYS[2]);
 
   // ?order=3,0,1,2 re-sequences the stops so the route line and the pin numbers
   // match the order the traveller dragged the plan into.
@@ -105,7 +127,7 @@
   }
 
   if (!single) {
-    fetch('/api/trips/trip_montreal_demo/geometry?mode=' + encodeURIComponent(MODE))
+    (custom ? Promise.reject() : fetch('/api/trips/trip_montreal_demo/geometry?mode=' + encodeURIComponent(MODE)))
       .then(function (r) { return r.json(); })
       .then(function (body) {
         if (!body || !body.ok || !body.data.paths || !body.data.paths.length) return drawStraight();

@@ -51,7 +51,7 @@ const MODE_NOTE: Record<Mode, string> = {
 import { MapFrame } from "@/components/MapFrame";
 import { Eyebrow, MONO, SERIF } from "@/components/ui";
 
-const STATS = [
+const DEMO_STATS = [
   { label: "Weather", value: "21°C", suffix: "rain 3 PM", suffixColor: "#1FA39A", icon: CloudRain },
   { label: "Today's spend", value: "$64", suffix: "/ $150", suffixColor: "var(--wl-muted)", icon: Wallet },
   { label: "On foot", value: "3.4 km", suffix: "of 6", suffixColor: "var(--wl-muted)", icon: Footprints },
@@ -88,6 +88,7 @@ export default function Today() {
   }, []);
 
   const AGENT_COLOUR: Record<string, string> = { food: C, attractions: A, transport: T, personalizer: V };
+
 
   /** The generated day, mapped onto the shape this screen already renders. */
   const stops = useMemo(() => {
@@ -131,6 +132,47 @@ export default function Today() {
   );
   const [dragging, setDragging] = useState<number | null>(null);
   const [mode, setMode] = useState<Mode>("transit");
+
+  const day = itinerary?.days[0];
+
+  /** Header copy and the stat row, from the real trip when there is one. */
+  const heading = trip
+    ? { eyebrow: `Day 1 of ${itinerary?.days.length ?? 1} · ${day?.date ?? trip.startDate}`, title: day?.summary ?? `${trip.destination.city}, planned` }
+    : { eyebrow: "Day 2 of 4 · Tuesday, Sep 16", title: "Montreal, mostly on foot" };
+
+  const stats =
+    trip && day
+      ? [
+          {
+            label: "Weather",
+            value: day.weather ? `${Math.round(day.weather.maxTempC)}°C` : "—",
+            suffix: day.weather?.badWindows[0]
+              ? `rain ${day.weather.badWindows[0].from.slice(11, 16)}`
+              : "clear",
+            suffixColor: day.weather?.badWindows.length ? "#A2542F" : "#1FA39A",
+            icon: CloudRain,
+          },
+          {
+            label: "Planned spend",
+            value: `${day.totals.estimatedCost.amount} ${day.totals.estimatedCost.currency}`,
+            suffix: `/ ${trip.preferences.dailyBudget.amount}`,
+            suffixColor: "var(--wl-muted)",
+            icon: Wallet,
+          },
+          {
+            label: "On foot",
+            value: `${(day.totals.walkingMeters / 1000).toFixed(1)} km`,
+            suffix: `of ${(trip.preferences.maxWalkMeters / 1000).toFixed(0)}`,
+            suffixColor: "var(--wl-muted)",
+            icon: Footprints,
+          },
+        ]
+      : DEMO_STATS;
+
+  /** Draw the real stops when we have them; the seeded Montreal day otherwise. */
+  const mapQuery = day?.items.length
+    ? `mode=${mode}&stops=${safeOrderStops(day, order)}`
+    : `day=2&mode=${mode}&order=${order.join(",")}`;
   const [kept, setKept] = useState(false);
   const [plan, setPlan] = useState<LegsResponse | null>(null);
   const [planning, setPlanning] = useState(false);
@@ -381,11 +423,11 @@ export default function Today() {
             Day 2 of 4 · Tuesday, Sep 16
           </Eyebrow>
           <h1 style={{ margin: 0, fontFamily: SERIF, fontWeight: 400, fontSize: "clamp(30px,4vw,44px)", lineHeight: 1.05 }}>
-            Montreal, mostly on foot
+            {heading.title}
           </h1>
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-          {STATS.map((s) => (
+          {stats.map((s) => (
             <div key={s.label} style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 16, padding: "11px 15px", minWidth: 118 }}>
               <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--wl-muted)" }}>
                 {s.label}
@@ -695,4 +737,15 @@ export default function Today() {
       </div>
     </div>
   );
+}
+
+
+/** "lat,lng,name|lat,lng,name" in the order the traveller arranged. */
+function safeOrderStops(day: { items: { place: { coords: { lat: number; lng: number }; name: string } }[] }, order: number[]) {
+  const seq = order.length === day.items.length ? order : day.items.map((_, i) => i);
+  return seq
+    .map((idx) => day.items[idx])
+    .filter(Boolean)
+    .map((i) => `${i.place.coords.lat.toFixed(5)},${i.place.coords.lng.toFixed(5)},${encodeURIComponent(i.place.name)}`)
+    .join("|");
 }
