@@ -93,6 +93,47 @@ export default function Today() {
   /** The generated day, mapped onto the shape this screen already renders. */
   const stops = useMemo(() => {
     const day = itinerary?.days[0];
+
+  // Nimbus, for this city: a real proposal when the forecast warrants one, and an honest
+  // "nothing to change" when it does not.
+  const [advisory, setAdvisory] = useState<{ headline: string; body: string } | null>(null);
+  const [rightNow, setRightNow] = useState<{ headline: string; narrative: string } | null>(null);
+
+  useEffect(() => {
+    const coords = trip?.destination.coords;
+    if (!coords) return;
+    const qs = `lat=${coords.lat}&lng=${coords.lng}`;
+
+    fetch(`/api/trips/${currentTripId()}/replan/live?${qs}`)
+      .then((r) => r.json())
+      .then((b) => {
+        if (!b?.ok) return;
+        const event = b.data.event;
+        setAdvisory(
+          event
+            ? { headline: event.observation, body: event.decision }
+            : {
+                headline: `Nimbus checked ${trip.destination.city}`,
+                body: b.data.reason ?? "Nothing in today's weather is worth rewriting the day for.",
+              },
+        );
+      })
+      .catch(() => setAdvisory(null));
+
+    fetch(`/api/trips/${currentTripId()}/now`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        location: coords,
+        remaining: trip.preferences.dailyBudget.amount,
+      }),
+    })
+      .then((r) => r.json())
+      .then((b) => {
+        if (b?.ok) setRightNow({ headline: b.data.headline, narrative: b.data.narrative });
+      })
+      .catch(() => setRightNow(null));
+  }, [trip]);
     if (!day || day.items.length === 0) return TODAY;
     return day.items.map((item) => ({
       time: item.startTime.slice(11, 16),
@@ -134,6 +175,47 @@ export default function Today() {
   const [mode, setMode] = useState<Mode>("transit");
 
   const day = itinerary?.days[0];
+
+  // Nimbus, for this city: a real proposal when the forecast warrants one, and an honest
+  // "nothing to change" when it does not.
+  const [advisory, setAdvisory] = useState<{ headline: string; body: string } | null>(null);
+  const [rightNow, setRightNow] = useState<{ headline: string; narrative: string } | null>(null);
+
+  useEffect(() => {
+    const coords = trip?.destination.coords;
+    if (!coords) return;
+    const qs = `lat=${coords.lat}&lng=${coords.lng}`;
+
+    fetch(`/api/trips/${currentTripId()}/replan/live?${qs}`)
+      .then((r) => r.json())
+      .then((b) => {
+        if (!b?.ok) return;
+        const event = b.data.event;
+        setAdvisory(
+          event
+            ? { headline: event.observation, body: event.decision }
+            : {
+                headline: `Nimbus checked ${trip.destination.city}`,
+                body: b.data.reason ?? "Nothing in today's weather is worth rewriting the day for.",
+              },
+        );
+      })
+      .catch(() => setAdvisory(null));
+
+    fetch(`/api/trips/${currentTripId()}/now`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        location: coords,
+        remaining: trip.preferences.dailyBudget.amount,
+      }),
+    })
+      .then((r) => r.json())
+      .then((b) => {
+        if (b?.ok) setRightNow({ headline: b.data.headline, narrative: b.data.narrative });
+      })
+      .catch(() => setRightNow(null));
+  }, [trip]);
 
   /** Header copy and the stat row, from the real trip when there is one. */
   const heading = trip
@@ -450,12 +532,18 @@ export default function Today() {
         </div>
         <div style={{ flex: "1 1 300px", minWidth: 0 }}>
           <div style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: ".12em", textTransform: "uppercase", color: "#9C9482", marginBottom: 6 }}>
-            Nimbus + Atlas · adapted 12 min ago
+            {advisory ? `Nimbus · ${advisory.headline}` : "Nimbus + Atlas · adapted 12 min ago"}
           </div>
           <p style={{ margin: 0, fontSize: "clamp(15px,1.3vw,17px)", lineHeight: 1.5 }}>
-            Rain from 3–5&nbsp;PM. I moved <strong style={{ fontWeight: 700 }}>Mount Royal lookout</strong> to
-            Thursday morning and put <strong style={{ fontWeight: 700 }}>Pointe-à-Callière</strong> in its
-            place — it&rsquo;s 6 minutes from your lunch and indoors. Dash re-routed you off the 11 bus.
+            {advisory ? (
+              advisory.body
+            ) : (
+              <>
+                Rain from 3–5&nbsp;PM. I moved <strong style={{ fontWeight: 700 }}>Mount Royal lookout</strong> to
+                Thursday morning and put <strong style={{ fontWeight: 700 }}>Pointe-à-Callière</strong> in its
+                place — it&rsquo;s 6 minutes from your lunch and indoors. Dash re-routed you off the 11 bus.
+              </>
+            )}
           </p>
         </div>
         <div style={{ flex: "0 0 auto", display: "flex", gap: 9, flexWrap: "wrap" }}>
@@ -722,11 +810,12 @@ export default function Today() {
           <div style={{ marginTop: 16, borderRadius: 20, padding: 18, background: "linear-gradient(135deg,#FFE9DC,#F4EBFB)", border: "1px solid #F2E4DA" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 7, fontFamily: MONO, fontSize: 10.5, letterSpacing: ".12em", textTransform: "uppercase", color: "#8C6A55", marginBottom: 8 }}>
               <Clock size={14} strokeWidth={2} color="currentColor" />
-              Right now · 2:40 PM · 3 h until dinner
+              {rightNow ? rightNow.headline : "Right now · 2:40 PM · 3 h until dinner"}
             </div>
             <p style={{ margin: "0 0 14px", fontSize: 15, color: "var(--wl-ink-2)" }}>
-              You&rsquo;re 400 m from Librairie Bertrand and the rain starts in 20 minutes. Books, then
-              coffee next door, keeps you $12 under today.
+              {rightNow
+                ? rightNow.narrative
+                : "You’re 400 m from Librairie Bertrand and the rain starts in 20 minutes. Books, then coffee next door, keeps you $12 under today."}
             </p>
             <button onClick={() => router.push("/now")} style={{ border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 14, fontWeight: 700, padding: "12px 20px", borderRadius: 999, width: "100%", maxWidth: 280, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
               <Sparkles size={16} strokeWidth={2} color="currentColor" />

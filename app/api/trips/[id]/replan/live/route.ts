@@ -1,5 +1,4 @@
-import { fail, ok } from "@/lib/api/respond";
-import { knownTrip } from "@/lib/api/guard";
+import { ok } from "@/lib/api/respond";
 import { providers, trace } from "@/lib/providers";
 import { MONTREAL, buildReplan, hourNow, rank, todayWeather } from "@/lib/agents/live";
 
@@ -14,7 +13,9 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const started = Date.now();
   const { id } = await ctx.params;
-  if (!knownTrip(id)) return fail({ code: "not_found", message: `No trip ${id}` }, started);
+  // Deliberately not gated on a known trip: these answer from coordinates alone, and on
+  // serverless the instance holding the trip is rarely the one answering here.
+  void id;
 
   const url = new URL(req.url);
   const near = {
