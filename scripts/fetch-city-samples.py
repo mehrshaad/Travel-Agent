@@ -386,6 +386,20 @@ def fetch_city(city: str, country: str, code: str, lat: float, lng: float, ua: s
     }
 
 
+def dump_city(data: dict) -> str:
+    """
+    One compact place per line. Pretty-printing the whole file cost ~40% more bytes for
+    a corpus nobody edits by hand, and a single-line file makes every re-snapshot look
+    like a full rewrite in review.
+    """
+    head = {k: v for k, v in data.items() if k != "elements"}
+    lines = [json.dumps(head, ensure_ascii=False)[:-1] + ',"elements":[']
+    elements = [json.dumps(e, ensure_ascii=False, separators=(",", ":")) for e in data["elements"]]
+    lines.append(",\n".join(elements))
+    lines.append("]}")
+    return "\n".join(lines) + "\n"
+
+
 def write_index() -> None:
     """Rebuilt from whatever is on disk, so a resumed run still leaves a complete index."""
     cities = []
@@ -436,7 +450,7 @@ def main() -> None:
             # One dead city must not cost the whole run; the next invocation retries it.
             print(f"    FAILED: {err}")
             continue
-        path.write_text(json.dumps(data, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+        path.write_text(dump_city(data), encoding="utf-8")
         print(f"    wrote {len(data['elements'])} places")
 
     write_index()
