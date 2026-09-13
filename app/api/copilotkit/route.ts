@@ -29,9 +29,11 @@ export const dynamic = "force-dynamic";
  * visible surface in the product — even though everything else degrades cleanly.
  */
 const MODEL_CHAIN = [
+  // Tool calling is what the chat lives on, so a reliable paid model leads here. The
+  // free models stay behind it as the fallback when credit runs out.
+  "openai/gpt-4o-mini",
   "inclusionai/ling-3.0-flash-vl:free",
   "nex-agi/nex-n2.5-pro:free",
-  "nex-agi/nex-n2.5-mini:free",
   "google/gemma-4-31b-it:free",
 ];
 
@@ -51,8 +53,10 @@ function failoverFetch(): typeof fetch {
       }
 
       const res = await fetch(input, { ...init, body });
-      // 429 = rate limited, 5xx = model down. Both are worth trying the next model for.
-      if (res.status !== 429 && res.status < 500) return res;
+      // 429 rate limited, 402 out of credit, 5xx model down — all mean "try the next one".
+      // 402 matters because a paid model leads the chain: with no credit it must fall
+      // straight through to the free models rather than failing the chat.
+      if (res.status !== 429 && res.status !== 402 && res.status < 500) return res;
 
       lastResponse = res;
       console.warn(`[copilotkit] ${model} returned ${res.status}, trying the next free model`);

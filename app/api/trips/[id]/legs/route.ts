@@ -3,12 +3,13 @@ import { knownTrip } from "@/lib/api/guard";
 import { providers, trace } from "@/lib/providers";
 import { planTransit } from "@/lib/transit";
 import { haversineMeters } from "@/lib/providers/normalize";
+import { getItinerary } from "@/lib/trips/store";
 import type { LatLng } from "@/types";
 
 export const dynamic = "force-dynamic";
 
-/** Day 2 stops, in order, with the coordinates the map draws. */
-const DAY2: { name: string; coords: LatLng }[] = [
+/** Fallback: the seeded Montreal day, used when a trip has no generated itinerary. */
+const DEMO_DAY: { name: string; coords: LatLng }[] = [
   { name: "Café Olimpico", coords: { lat: 45.52355, lng: -73.60148 } },
   { name: "Place Jacques-Cartier", coords: { lat: 45.5075, lng: -73.5533 } },
   { name: "Notre-Dame Basilica", coords: { lat: 45.5045, lng: -73.5563 } },
@@ -46,9 +47,18 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 
   const p = providers();
 
+  // Prefer the trip's own stops so this works for whatever city was planned.
+  const itinerary = getItinerary(id);
+  const dayIndex = Number(new URL(_req.url).searchParams.get("day") ?? 1) - 1;
+  const day = itinerary?.days[Math.max(0, Math.min(dayIndex, (itinerary?.days.length ?? 1) - 1))];
+  const stops =
+    day && day.items.length > 1
+      ? day.items.map((i) => ({ name: i.place.name, coords: i.place.coords }))
+      : DEMO_DAY;
+
   const legs = await Promise.all(
-    DAY2.slice(0, -1).map(async (from, i) => {
-      const to = DAY2[i + 1];
+    stops.slice(0, -1).map(async (from, i) => {
+      const to = stops[i + 1];
 
       let metres = haversineMeters(from.coords, to.coords);
       try {

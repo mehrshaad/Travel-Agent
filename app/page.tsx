@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight, Brain, CloudRain, Eye, GraduationCap, Sparkles, Zap } from "lucide-react";
 import { EXAMPLES } from "@/lib/mock/ui";
+import { createTrip, setCurrentTripId } from "@/lib/trips/client";
 import { MONO, SERIF } from "@/components/ui";
 
 const LOOP = [
@@ -20,6 +21,24 @@ const LOOP_ICONS = [Eye, Brain, Zap, GraduationCap];
 export default function Landing() {
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
+  const [starting, setStarting] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  /** Read the sentence, resolve the city, then hand off to the wizard. */
+  async function start() {
+    if (starting) return;
+    setStarting(true);
+    setProblem(null);
+
+    const created = await createTrip(prompt);
+    if (!created) {
+      setProblem("I could not place that city. Try naming it on its own — \"Lisbon\", \"Kyoto\".");
+      setStarting(false);
+      return;
+    }
+    setCurrentTripId(created.trip.id);
+    router.push("/onboarding");
+  }
 
   return (
     <div
@@ -208,7 +227,8 @@ export default function Landing() {
                 ))}
               </div>
               <button
-                onClick={() => router.push("/onboarding")}
+                onClick={start}
+                disabled={starting}
                 style={{
                   border: 0,
                   background: "var(--wl-ink)",
@@ -227,6 +247,12 @@ export default function Landing() {
               </button>
             </div>
           </div>
+
+          {problem && (
+            <div style={{ marginTop: 14, padding: "12px 16px", borderRadius: 16, background: "#FFF6EF", border: "1px solid #F6E6D8", color: "#6B4A33", fontSize: 14 }}>
+              {problem}
+            </div>
+          )}
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 18 }}>
             {EXAMPLES.map((label) => (

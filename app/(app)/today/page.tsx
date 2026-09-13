@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core";
 import { CalendarDays, Car, Check, ChevronDown, ChevronUp, Clock, CloudRain, Eye, Footprints, GripVertical, Sparkles, Train, Wallet } from "lucide-react";
-import { TODAY } from "@/lib/mock/ui";
+import { TODAY, C, A, T, V } from "@/lib/mock/ui";
+import { currentTripId, fetchItinerary, fetchTrip } from "@/lib/trips/client";
+import type { Itinerary, Trip } from "@/types";
 import { slugify } from "@/lib/slug";
 
 /** Day 2 runs Mile End to Old Montreal — the same ends the map draws. */
@@ -67,7 +69,50 @@ export default function Today() {
 
   // The plan is an ORDER over TODAY, not a copy of it: the time slots stay put and
   // the stops move between them, which is what dragging an itinerary should mean.
+  // The traveller's own plan when they have one, the seeded Montreal day otherwise, so
+  // the screen is never empty on a cold open.
+  const [trip, setTrip] = useState<Trip | null>(null);
+  const [itinerary, setItinerary] = useState<Itinerary | null>(null);
+
+  useEffect(() => {
+    const id = currentTripId();
+    let live = true;
+    Promise.all([fetchTrip(id), fetchItinerary(id)]).then(([t, i]) => {
+      if (!live) return;
+      if (t) setTrip(t);
+      if (i) setItinerary(i);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const AGENT_COLOUR: Record<string, string> = { food: C, attractions: A, transport: T, personalizer: V };
+
+  /** The generated day, mapped onto the shape this screen already renders. */
+  const stops = useMemo(() => {
+    const day = itinerary?.days[0];
+    if (!day || day.items.length === 0) return TODAY;
+    return day.items.map((item) => ({
+      time: item.startTime.slice(11, 16),
+      title: item.place.name,
+      meta: [item.place.category, item.place.rating ? `${item.place.rating} \u2605` : null]
+        .filter(Boolean)
+        .join(" \u00b7 "),
+      why: item.why.text,
+      cost: item.estimatedCost.amount ? `${item.estimatedCost.amount} ${item.estimatedCost.currency}` : "Free",
+      color: AGENT_COLOUR[item.why.agent] ?? A,
+      swapped: item.why.factors.some((f) => f.kind === "weather" && f.weight > 0),
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itinerary]);
+
   const [order, setOrder] = useState<number[]>(() => TODAY.map((_, i) => i));
+
+  // Re-seed the order when a different plan arrives.
+  useEffect(() => {
+    setOrder(stops.map((_, i) => i));
+  }, [stops]);
   const [dragging, setDragging] = useState<number | null>(null);
   const [mode, setMode] = useState<Mode>("transit");
   const [kept, setKept] = useState(false);
@@ -178,12 +223,12 @@ export default function Today() {
       "Each entry lists the time slot, the stop, why it was chosen and its cost.",
     value: order.map((idx, pos) => ({
       position: pos + 1,
-      time: TODAY[pos].time,
-      stop: TODAY[idx].title,
-      kind: TODAY[idx].meta,
-      why: TODAY[idx].why,
-      cost: TODAY[idx].cost,
-      indoor: !TODAY[idx].title.toLowerCase().includes("walk"),
+      time: stops[pos].time,
+      stop: stops[idx].title,
+      kind: stops[idx].meta,
+      why: stops[idx].why,
+      cost: stops[idx].cost,
+      indoor: !stops[idx].title.toLowerCase().includes("walk"),
     })),
   });
 
@@ -208,13 +253,13 @@ export default function Today() {
     if (q.length > 80) return { ok: false, message: "That does not look like a stop name." };
 
     const hits = order
-      .map((idx, pos) => ({ pos, title: TODAY[idx].title }))
+      .map((idx, pos) => ({ pos, title: stops[idx].title }))
       .filter((r) => r.title.toLowerCase().includes(q));
 
     if (hits.length === 0) {
       return {
         ok: false,
-        message: `There is no "${raw}" in today's plan. It has: ${order.map((i) => TODAY[i].title).join(", ")}.`,
+        message: `There is no "${raw}" in today's plan. It has: ${order.map((i) => stops[i].title).join(", ")}.`,
       };
     }
     if (hits.length > 1) {
@@ -240,7 +285,7 @@ export default function Today() {
       if (!Number.isFinite(wanted)) return "Give me a position number between 1 and " + order.length + ".";
       const to = Math.max(0, Math.min(order.length - 1, Math.round(wanted) - 1));
 
-      const name = TODAY[order[found.pos]].title;
+      const name = stops[order[found.pos]].title;
       if (to === found.pos) return `${name} is already at position ${to + 1}.`;
 
       move(found.pos, to);
@@ -293,7 +338,7 @@ export default function Today() {
     description: "Put today's plan back into its original order.",
     parameters: [],
     handler: () => {
-      setOrder(TODAY.map((_, i) => i));
+      setOrder(stops.map((_, i) => i));
       return "Today is back in its original order.";
     },
   });
@@ -305,7 +350,7 @@ export default function Today() {
     handler: ({ stop }) => {
       const found = resolveStop(stop);
       if (!found.ok) return found.message;
-      const hit = TODAY[order[found.pos]];
+      const hit = stops[order[found.pos]];
       router.push(`/place/${slugify(hit.title)}`);
       return `Opening ${hit.title}.`;
     },
@@ -374,7 +419,7 @@ export default function Today() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(330px,1fr))", gap: 18 }}>
         <div style={{ ...CARD, overflow: "hidden" }}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "space-between", padding: "15px 18px", borderBottom: "1px solid #F3EDE3" }}>
-            <Eyebrow>Route · {TODAY.length} stops</Eyebrow>
+            <Eyebrow>Route · {stops.length} stops</Eyebrow>
             <div style={{ display: "flex", gap: 6 }}>
               {([
                 ["walk", "Walking", Footprints],
@@ -496,8 +541,8 @@ export default function Today() {
           </div>
 
           {order.map((idx, i) => {
-            const t = TODAY[idx];
-            const slot = TODAY[i]; // the time slot belongs to the position, not the stop
+            const t = stops[idx];
+            const slot = stops[i]; // the time slot belongs to the position, not the stop
             const isDragging = dragging === i;
 
             return (

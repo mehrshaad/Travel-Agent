@@ -4,24 +4,35 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowRight, MapPin } from "lucide-react";
 import { CREW } from "@/lib/mock/ui";
+import { currentTripId, planTrip } from "@/lib/trips/client";
 import { MONO, SERIF } from "@/components/ui";
 
 export default function Generating() {
   const router = useRouter();
   const [genStep, setGenStep] = useState(0);
 
+  const [failed, setFailed] = useState<string | null>(null);
+
+  // The crew list animates while the real request runs. Whichever finishes last wins,
+  // so the plan is always ready by the time Today renders.
   useEffect(() => {
-    const t = setInterval(() => {
-      setGenStep((n) => {
-        if (n + 1 > CREW.length + 1) {
-          clearInterval(t);
-          router.push("/today");
-          return n;
-        }
-        return n + 1;
-      });
-    }, 620);
-    return () => clearInterval(t);
+    let done = false;
+    const t = setInterval(() => setGenStep((n) => Math.min(n + 1, CREW.length + 1)), 620);
+
+    (async () => {
+      const itinerary = await planTrip(currentTripId());
+      done = true;
+      clearInterval(t);
+      if (!itinerary) {
+        setFailed("I could not reach enough places for that city just now.");
+        return;
+      }
+      router.push("/today");
+    })();
+
+    return () => {
+      if (!done) clearInterval(t);
+    };
   }, [router]);
 
   return (
@@ -104,6 +115,12 @@ export default function Generating() {
               </div>
             );
           })}
+          {failed && (
+            <div style={{ margin: "12px 10px", padding: "12px 16px", borderRadius: 16, background: "#FFF6EF", border: "1px solid #F6E6D8", color: "#6B4A33", fontSize: 14 }}>
+              {failed} You can still open the demo trip below.
+            </div>
+          )}
+
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", justifyContent: "space-between", padding: "16px 10px 6px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--wl-muted)", fontSize: 13.5 }}>
               <span style={{ width: 15, height: 15, borderRadius: "50%", border: "2px solid #EDE5D8", borderTopColor: "#E0603C", animation: "wl-spin .9s linear infinite" }} />

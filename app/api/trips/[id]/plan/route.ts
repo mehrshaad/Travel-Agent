@@ -1,47 +1,43 @@
-import { fail, sse } from "@/lib/api/respond";
-import { knownTrip } from "@/lib/api/guard";
-import { ITINERARY, PLAN_AGENTS, USAGE, trace } from "@/lib/mock/fixtures";
+import { fail, ok } from "@/lib/api/respond";
+import { providers, trace } from "@/lib/providers";
+import { generateItinerary } from "@/lib/trips/generate";
+import { DEMO_TRIP_ID, getTrip, setItinerary } from "@/lib/trips/store";
+import { TRIP as DEMO_TRIP } from "@/lib/mock/fixtures";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /**
- * POST /api/trips/:id/plan — Server-Sent Events.
+ * Build the itinerary for a stored trip, from live data for that city.
  *
- * Streamed rather than request/response because free-tier models take 10–40s per agent.
- * Days arrive one at a time so the UI can render day 1 while day 3 is still planning;
- * do not build a blocking spinner against this.
+ * Returns JSON rather than the streamed version: the whole plan takes a few seconds now
+ * that ranking is deterministic, and a single response is far easier for the UI to hold
+ * than a stream it has to reassemble.
  */
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const started = Date.now();
   const { id } = await ctx.params;
-  if (!knownTrip(id)) return fail({ code: "not_found", message: `No trip ${id}` }, started);
 
-  const events: Array<{ event: string; data: unknown; delayMs?: number }> = [
-    { event: "plan.started", data: { type: "plan.started", tripId: id, agents: PLAN_AGENTS } },
-  ];
+  const trip = getTrip(id) ?? (id === DEMO_TRIP_ID ? DEMO_TRIP : undefined);
+  if (!trip) return fail({ code: "not_found", message: `No trip ${id}` }, started);
 
-  for (const agent of PLAN_AGENTS) {
-    events.push({
-      event: "agent.update",
-      data: { type: "agent.update", trace: trace(agent, `${agent} pass`, "running") },
-      delayMs: 260,
-    });
-    events.push({
-      event: "agent.update",
-      data: { type: "agent.update", trace: trace(agent, `${agent} pass`, "done", "candidates ranked") },
-      delayMs: 340,
-    });
+  try {
+    const p = providers();
+    const itinerary = await generateItinerary(trip, p, trace());
+
+    if (itinerary.days.every((d) => d.items.length === 0)) {
+      return fail(
+        {
+          code: "upstream_failed",
+          message: `I could not find enough places around ${trip.destination.city} just now. Try again in a moment.`,
+        },
+        started,
+      );
+    }
+
+    setItinerary(id, itinerary);
+    return ok(itinerary, started, { usage: p.usage() });
+  } catch (error) {
+    return fail({ code: "internal", message: (error as Error).message }, started);
   }
-
-  for (const day of ITINERARY.days) {
-    events.push({ event: "itinerary.partial", data: { type: "itinerary.partial", day }, delayMs: 220 });
-  }
-
-  events.push({ event: "usage", data: { type: "usage", usage: USAGE } });
-  events.push({
-    event: "itinerary.complete",
-    data: { type: "itinerary.complete", itinerary: ITINERARY },
-    delayMs: 150,
-  });
-  events.push({ event: "done", data: { type: "done" } });
-
-  return sse(events);
 }

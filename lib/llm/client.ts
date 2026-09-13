@@ -12,25 +12,32 @@ import type { ToolCall } from "@/types";
 const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 
 /**
- * Verified 2026-09-12 against the live free tier: gemma 429s under load, and both
- * nemotron variants emit their scratchpad as the answer. These four returned clean,
- * instruction-following prose, so they are tried first and gemma is kept last.
+ * Model routing, verified against OpenRouter on 2026-09-12.
+ *
+ * Paid models lead because the free tier is unreliable under load — gemma 429s and both
+ * nemotron variants answer with their own scratchpad. The free models stay in the chain
+ * behind them, so the app keeps working if the credit runs out rather than failing.
+ *
+ * Cost at our prompt sizes (a few hundred tokens in, a couple of hundred out):
+ *   openai/gpt-4o-mini    $0.15 / $0.60 per M  — roughly a tenth of a cent per call
+ *   openai/gpt-4.1-mini   $0.40 / $1.60 per M
  */
 const MODELS = {
   fast: [
+    "openai/gpt-4o-mini",
     "inclusionai/ling-3.0-flash-vl:free",
     "nex-agi/nex-n2.5-pro:free",
     "nex-agi/nex-n2.5-mini:free",
-    "google/gemma-4-31b-it:free",
   ],
   extract: [
+    "openai/gpt-4o-mini",
     "nex-agi/nex-n2.5-pro:free",
     "inclusionai/ling-3.0-flash-vl:free",
-    "google/gemma-4-31b-it:free",
   ],
   reasoning: [
+    "openai/gpt-4.1-mini",
+    "openai/gpt-4o-mini",
     "inclusionai/ling-3.0-flash-vl:free",
-    "nvidia/nemotron-3-ultra-550b-a55b:free",
   ],
 } as const;
 
@@ -136,6 +143,8 @@ async function callOnce(model: string, system: string, user: string, o: CallOpts
     });
     const body = await res.json().catch(() => null);
     const content: string | undefined = body?.choices?.[0]?.message?.content;
+    // No credit on the key, or the model is rate limited: return null so the caller
+    // moves to the next model in the chain instead of surfacing an error.
     o.onToolCall?.({
       tool: "llm",
       args: { model },

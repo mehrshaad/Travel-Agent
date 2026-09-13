@@ -1,9 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, Footprints, Gauge, Utensils } from "lucide-react";
 import { INTERESTS, PARSED, PICKERS, STEP_COPY } from "@/lib/mock/ui";
+import { currentTripId, fetchTrip } from "@/lib/trips/client";
+import type { Trip } from "@/types";
 import { MONO, SERIF } from "@/components/ui";
 
 /** One icon per preference picker, keyed the same way PICKERS is. */
@@ -12,6 +14,45 @@ const PICKER_ICONS = { pace: Gauge, walk: Footprints, dinner: Utensils };
 export default function Onboarding() {
   const router = useRouter();
   const [step, setStep] = useState(1);
+  const [trip, setTrip] = useState<Trip | null>(null);
+
+  // Show what the parser actually read from the sentence.
+  useEffect(() => {
+    let live = true;
+    fetchTrip(currentTripId()).then((t) => {
+      if (!live || !t) return;
+      setTrip(t);
+      if (t.preferences.interests.length) {
+        setInterests(
+          t.preferences.interests.map((i) => i.charAt(0).toUpperCase() + i.slice(1)),
+        );
+      }
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const parsedRows = trip
+    ? [
+        { label: "Destination", value: `${trip.destination.city}, ${trip.destination.country}`, note: "resolved on the map" },
+        {
+          label: "Dates",
+          value: `${trip.startDate} → ${trip.endDate}`,
+          note: `${trip.destination.timezone}`,
+        },
+        {
+          label: "Budget",
+          value: `${trip.preferences.dailyBudget.amount} ${trip.preferences.dailyBudget.currency} / day`,
+          note: "read from your prompt",
+        },
+        {
+          label: "Travellers",
+          value: `${trip.travelers.adults} adult${trip.travelers.adults === 1 ? "" : "s"}`,
+          note: trip.preferences.pace + " pace",
+        },
+      ]
+    : PARSED;
   const [interests, setInterests] = useState<string[]>([
     "History", "Cafés", "Bookstores", "Persian food", "Walking",
   ]);
@@ -119,7 +160,7 @@ export default function Onboarding() {
 
           {step === 1 && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 12 }}>
-              {PARSED.map((p) => (
+              {parsedRows.map((p) => (
                 <div key={p.label} style={{ border: "1px solid var(--wl-line)", borderRadius: 18, padding: "15px 17px", background: "var(--wl-bg)" }}>
                   <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--wl-muted)", marginBottom: 6 }}>
                     {p.label}

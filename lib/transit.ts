@@ -122,7 +122,12 @@ export function planTransit(origin: LatLng, destination: LatLng, transitFare = 3
     note,
   });
 
-  if (!a || !b) return walkOnly("No metro stations found nearby.");
+  // The seeded network covers Montreal. Anywhere else the nearest station is hundreds
+  // of kilometres away, so say there is no metro rather than invent a route across it.
+  const SERVICE_RADIUS_M = 25000;
+  if (!a || !b || a.metres > SERVICE_RADIUS_M || b.metres > SERVICE_RADIUS_M) {
+    return walkOnly("No metro network mapped for this city yet — walking and taxi only.");
+  }
   if (a.stop.name === b.stop.name) return walkOnly("Both ends are at the same station — walking is quicker.");
 
   // Below roughly a kilometre the metro loses to walking once you add access and headway.
