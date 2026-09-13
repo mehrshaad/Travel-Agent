@@ -113,6 +113,22 @@ export default function Today() {
   useEffect(() => {
     setOrder(stops.map((_, i) => i));
   }, [stops]);
+
+  /**
+   * Guard the render against the frame where `order` still describes the previous plan.
+   *
+   * The effect above re-seeds the order, but React renders once before effects run: with
+   * a 7-stop seeded day in `order` and a 5-stop Barcelona plan in `stops`, that render
+   * read stops[5] and crashed on `.time`. Derive a safe order during render instead of
+   * trusting state to have caught up.
+   */
+  const safeOrder = useMemo(
+    () =>
+      order.length === stops.length && order.every((i) => i >= 0 && i < stops.length)
+        ? order
+        : stops.map((_, i) => i),
+    [order, stops],
+  );
   const [dragging, setDragging] = useState<number | null>(null);
   const [mode, setMode] = useState<Mode>("transit");
   const [kept, setKept] = useState(false);
@@ -221,9 +237,9 @@ export default function Today() {
     description:
       "The traveller's plan for today in Montreal, in order. Position 1 happens first. " +
       "Each entry lists the time slot, the stop, why it was chosen and its cost.",
-    value: order.map((idx, pos) => ({
+    value: safeOrder.map((idx, pos) => ({
       position: pos + 1,
-      time: stops[pos].time,
+      time: (stops[pos] ?? stops[0]).time,
       stop: stops[idx].title,
       kind: stops[idx].meta,
       why: stops[idx].why,
@@ -252,14 +268,14 @@ export default function Today() {
     if (q.length < 2) return { ok: false, message: "Tell me which stop you mean." };
     if (q.length > 80) return { ok: false, message: "That does not look like a stop name." };
 
-    const hits = order
+    const hits = safeOrder
       .map((idx, pos) => ({ pos, title: stops[idx].title }))
       .filter((r) => r.title.toLowerCase().includes(q));
 
     if (hits.length === 0) {
       return {
         ok: false,
-        message: `There is no "${raw}" in today's plan. It has: ${order.map((i) => stops[i].title).join(", ")}.`,
+        message: `There is no "${raw}" in today's plan. It has: ${safeOrder.map((i) => stops[i]?.title).filter(Boolean).join(", ")}.`,
       };
     }
     if (hits.length > 1) {
@@ -282,10 +298,10 @@ export default function Today() {
       if (!found.ok) return found.message;
 
       const wanted = Number(toPosition);
-      if (!Number.isFinite(wanted)) return "Give me a position number between 1 and " + order.length + ".";
-      const to = Math.max(0, Math.min(order.length - 1, Math.round(wanted) - 1));
+      if (!Number.isFinite(wanted)) return "Give me a position number between 1 and " + safeOrder.length + ".";
+      const to = Math.max(0, Math.min(safeOrder.length - 1, Math.round(wanted) - 1));
 
-      const name = stops[order[found.pos]].title;
+      const name = stops[safeOrder[found.pos]]?.title ?? "that stop";
       if (to === found.pos) return `${name} is already at position ${to + 1}.`;
 
       move(found.pos, to);
@@ -350,7 +366,7 @@ export default function Today() {
     handler: ({ stop }) => {
       const found = resolveStop(stop);
       if (!found.ok) return found.message;
-      const hit = stops[order[found.pos]];
+      const hit = stops[safeOrder[found.pos]];
       router.push(`/place/${slugify(hit.title)}`);
       return `Opening ${hit.title}.`;
     },
@@ -540,9 +556,9 @@ export default function Today() {
             </Link>
           </div>
 
-          {order.map((idx, i) => {
+          {safeOrder.map((idx, i) => {
             const t = stops[idx];
-            const slot = stops[i]; // the time slot belongs to the position, not the stop
+            const slot = stops[i] ?? stops[stops.length - 1]; // the time slot belongs to the position, not the stop
             const isDragging = dragging === i;
 
             return (
@@ -650,9 +666,9 @@ export default function Today() {
                   </button>
                   <button
                     onClick={() => nudge(i, 1)}
-                    disabled={i === order.length - 1}
+                    disabled={i === safeOrder.length - 1}
                     aria-label={`Move ${t.title} later`}
-                    style={{ border: 0, background: "transparent", color: i === order.length - 1 ? "#DDD3C2" : "var(--wl-muted)", padding: 2, lineHeight: 0 }}
+                    style={{ border: 0, background: "transparent", color: i === safeOrder.length - 1 ? "#DDD3C2" : "var(--wl-muted)", padding: 2, lineHeight: 0 }}
                   >
                     <ChevronDown size={14} strokeWidth={2} color="currentColor" />
                   </button>
