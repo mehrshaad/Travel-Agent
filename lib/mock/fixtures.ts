@@ -28,6 +28,7 @@ export const TRIP: Trip = {
     query: "Montreal, Canada",
     city: "Montréal",
     country: "Canada",
+    countryCode: "ca",
     coords: { lat: 45.5017, lng: -73.5673 },
     timezone: "America/Toronto",
   },

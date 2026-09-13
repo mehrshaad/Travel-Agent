@@ -6,7 +6,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core";
 import { CalendarDays, Car, Check, ChevronDown, ChevronUp, Clock, CloudRain, Eye, Footprints, GripVertical, Sparkles, Train, Wallet } from "lucide-react";
 import { TODAY, C, A, T, V } from "@/lib/mock/ui";
-import { currentTripId, fetchItinerary, fetchTrip } from "@/lib/trips/client";
+import { DEMO_TRIP_ID, currentTripId, fetchItinerary, fetchTrip } from "@/lib/trips/client";
 import type { Itinerary, Trip } from "@/types";
 import { slugify } from "@/lib/slug";
 
@@ -45,10 +45,19 @@ const BADGES: Record<LegRow["kind"], { bg: string; fg: string; color: string }> 
 
 const MODE_NOTE: Record<Mode, string> = {
   walk: "Every leg on foot. Honest about what that costs you in time.",
-  transit: "STM single fares. Lines, stations and interchanges from OpenStreetMap.",
+  transit: "Lines, stations and interchanges from OpenStreetMap. Fares are modelled where no feed exists.",
   taxi: "Fares modelled from road distance — not live quotes.",
 };
+
+/**
+ * The distance below which lib/transit refuses to plan a ride, for the same reason it
+ * does: under a kilometre the access walk and the wait cost more than the ride saves.
+ * A leg shorter than this says nothing about whether the city has transport.
+ */
+const RIDEABLE_M = 1000;
 import { MapFrame } from "@/components/MapFrame";
+import { UberLink, type UberStop } from "@/components/UberLink";
+import { Loader } from "@/components/RouteProgress";
 import { Eyebrow, MONO, SERIF } from "@/components/ui";
 
 const DEMO_STATS = [
@@ -75,9 +84,19 @@ export default function Today() {
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
   /** False until the trip lookup has settled, so nothing requests with half the facts. */
   const [loaded, setLoaded] = useState(false);
+  /**
+   * Whether the seeded Montreal day is a legitimate stand-in.
+   *
+   * It is only ever legitimate on the demo trip. Falling back to it whenever the real
+   * itinerary was missing is how a St. Catharines traveller got a Montreal café at 09:00.
+   */
+  const [onDemoTrip, setOnDemoTrip] = useState(false);
+  /** Same rule as useTrip: never paint the seeded city before the real trip has settled. */
+  const showSeed = loaded && onDemoTrip && !itinerary;
 
   useEffect(() => {
     const id = currentTripId();
+    setOnDemoTrip(id === DEMO_TRIP_ID);
     let live = true;
     Promise.all([fetchTrip(id), fetchItinerary(id)]).then(([t, i]) => {
       if (!live) return;
@@ -97,7 +116,7 @@ export default function Today() {
   const stops = useMemo(() => {
     const day = itinerary?.days[0];
 
-    if (!day || day.items.length === 0) return TODAY;
+    if (!day || day.items.length === 0) return showSeed ? TODAY : [];
     return day.items.map((item) => ({
       time: item.startTime.slice(11, 16),
       title: item.place.name,
@@ -110,7 +129,7 @@ export default function Today() {
       swapped: item.why.factors.some((f) => f.kind === "weather" && f.weight > 0),
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itinerary]);
+  }, [itinerary, showSeed]);
 
   const [order, setOrder] = useState<number[]>(() => TODAY.map((_, i) => i));
 
@@ -183,7 +202,9 @@ export default function Today() {
   /** Header copy and the stat row, from the real trip when there is one. */
   const heading = trip
     ? { eyebrow: `Day 1 of ${itinerary?.days.length ?? 1} · ${day?.date ?? trip.startDate}`, title: day?.summary ?? `${trip.destination.city}, planned` }
-    : { eyebrow: "Day 2 of 4 · Tuesday, Sep 16", title: "Montreal, mostly on foot" };
+    : showSeed
+      ? { eyebrow: "Day 2 of 4 · Tuesday, Sep 16", title: "Montreal, mostly on foot" }
+      : { eyebrow: loaded ? "No trip loaded" : "Loading your trip…", title: loaded ? "Nothing planned yet" : "One moment" };
 
   const stats =
     trip && day
@@ -212,7 +233,9 @@ export default function Today() {
             icon: Footprints,
           },
         ]
-      : DEMO_STATS;
+      : showSeed
+        ? DEMO_STATS
+        : [];
 
   /** Draw the real stops when we have them; the seeded Montreal day otherwise. */
   const mapQuery = day?.items.length
@@ -309,6 +332,68 @@ export default function Today() {
   }, [loaded, day, trip]);
 
   /**
+   * Does this city have any public transport at all?
+   *
+   * `null` means we do not know yet — the lookup is in flight, or Overpass did not
+   * answer — and the Transit tab stays offered on that, because a timeout is not
+   * evidence that a city has no trains. Only a lookup that succeeded and found nothing
+   * mapped anywhere along today's route answers `false`.
+   */
+  const [transitMapped, setTransitMapped] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const coords = day?.items.map((i) => i.place.coords) ?? [];
+    if (!loaded || !coords.length) return;
+
+    const controller = new AbortController();
+    // The trip lives in this browser, so the id in the path is only there to clear the
+    // route's guard and every fact the lookup needs travels in the query string.
+    const stops = coords.map((c) => `${c.lat.toFixed(5)},${c.lng.toFixed(5)}`).join("|");
+    fetch(`/api/trips/${DEMO_TRIP_ID}/geometry?what=stations&stops=${encodeURIComponent(stops)}`, {
+      signal: controller.signal,
+    })
+      .then((r) => r.json())
+      .then((b) => {
+        const data = b?.ok ? b.data : null;
+        setTransitMapped(
+          data?.known ? data.counts.rail + data.counts.bus + data.counts.ferry > 0 : null,
+        );
+      })
+      .catch(() => setTransitMapped(null));
+
+    return () => controller.abort();
+  }, [loaded, day]);
+
+  /**
+   * The legs API's own verdict, read only when OpenStreetMap could not be reached.
+   *
+   * A leg gets no transit row either because the city has none or because the hop is too
+   * short to ride, so only legs long enough to ride are counted — a day of five-minute
+   * walks must not report a metro city as having no public transport.
+   */
+  const rideableLegs = plan?.legs.filter((l) => l.metres >= RIDEABLE_M) ?? [];
+  const legsRuleOutTransit =
+    rideableLegs.length > 0 && rideableLegs.every((l) => l.transit.badge === "Walk instead");
+  const transitAvailable = transitMapped ?? !legsRuleOutTransit;
+
+  // A tab that cannot be honoured must not be offered, and must not stay selected either.
+  useEffect(() => {
+    if (!transitAvailable) setMode((m) => (m === "transit" ? "walk" : m));
+  }, [transitAvailable]);
+
+  /**
+   * The two ends of leg `index`, from the plan this browser holds.
+   *
+   * The legs request is sent once, in the itinerary's own order, so leg `i` always runs
+   * from stop `i` to stop `i + 1`: dragging reorders the list on screen, not the costed
+   * legs. The seeded demo carries no coordinates in the browser and so gets no link.
+   */
+  function legEnd(index: number): UberStop | null {
+    const place = day?.items[index]?.place;
+    return place ? { name: place.name, coords: place.coords } : null;
+  }
+
+  /**
    * A drag that never fires dragend — cancelled with Escape, dropped outside the list,
    * or interrupted — leaves `dragging` set, and then ordinary pointer movement over the
    * list keeps reordering rows. Reset from the window so the state cannot get stuck.
@@ -332,7 +417,7 @@ export default function Today() {
 
   useCopilotReadable({
     description:
-      "The traveller's plan for today in Montreal, in order. Position 1 happens first. " +
+      `The traveller's plan for today in ${trip?.destination.city ?? "the city they named"}, in order. Position 1 happens first. ` +
       "Each entry lists the time slot, the stop, why it was chosen and its cost.",
     value: safeOrder.map((idx, pos) => ({
       position: pos + 1,
@@ -348,11 +433,18 @@ export default function Today() {
   useCopilotReadable({
     description: "Today's conditions and budget for the traveller.",
     value: {
-      city: "Montreal",
-      date: "Tuesday, Sep 16",
-      weather: "21°C, rain expected 3-5 PM",
-      spentToday: "$64 of $150",
-      walkedToday: "3.4 km of 6 km",
+      city: trip?.destination.city ?? "unknown",
+      date: day?.date ?? "unknown",
+      weather: day?.weather
+        ? `${Math.round(day.weather.maxTempC)}°C${day.weather.badWindows[0] ? ", " + day.weather.badWindows[0].reason : ", clear"}`
+        : "forecast not loaded",
+      spentToday: day && trip
+        ? `${day.totals.estimatedCost.amount} of ${trip.preferences.dailyBudget.amount} ${trip.preferences.dailyBudget.currency}`
+        : "not planned yet",
+      walkedToday:
+        day && trip
+          ? `${(day.totals.walkingMeters / 1000).toFixed(1)} km of ${(trip.preferences.maxWalkMeters / 1000).toFixed(1)} km`
+          : "not measured yet",
     },
   });
 
@@ -412,24 +504,36 @@ export default function Today() {
       "Ask the live crew what to do right now, using real weather and places near the traveller. " +
       "Use this for open-ended 'what now' questions rather than guessing.",
     parameters: [
-      { name: "budgetRemaining", type: "number", description: "Dollars left to spend today.", required: false },
+      { name: "budgetRemaining", type: "number", description: "How much money is left to spend today, in the trip's own currency.", required: false },
     ],
     handler: async ({ budgetRemaining }) => {
       // Clamp rather than trust: a model can pass anything, including a negative
       // budget or a number big enough to make every option "affordable".
       const raw = Number(budgetRemaining);
-      const remaining = Number.isFinite(raw) ? Math.max(0, Math.min(5000, Math.round(raw))) : 86;
+      const planned = day?.totals.estimatedCost.amount ?? 0;
+      const ceiling = trip?.preferences.dailyBudget.amount ?? 100;
+      const remaining = Number.isFinite(raw)
+        ? Math.max(0, Math.min(5000, Math.round(raw)))
+        : Math.max(ceiling - planned, 0);
 
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 20000);
       try {
-        const res = await fetch("/api/trips/trip_montreal_demo/now", {
+        // The traveller's own city, not the demo's. This action fed the sidebar Montreal
+        // coordinates while the sidebar's own prompt claimed they were in Montreal, so the
+        // crew confidently agreed with itself about the wrong place.
+        const first = itinerary?.days[0]?.items[0]?.place.coords;
+        const here = first ?? trip?.destination.coords;
+        const res = await fetch(`/api/trips/${currentTripId()}/now`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           signal: controller.signal,
           body: JSON.stringify({
-            location: { lat: 45.5017, lng: -73.5673 },
+            location: here,
             remaining,
+            countryCode: trip?.destination.countryCode,
+            currency: trip?.preferences.dailyBudget.currency,
+            interests: trip?.preferences.interests,
           }),
         });
         const body = await res.json();
@@ -505,17 +609,25 @@ export default function Today() {
         </div>
         <div style={{ flex: "1 1 300px", minWidth: 0 }}>
           <div style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: ".12em", textTransform: "uppercase", color: "#9C9482", marginBottom: 6 }}>
-            {advisory ? advisory.headline : "Nimbus + Atlas · adapted 12 min ago"}
+            {advisory ? advisory.headline : showSeed ? "Nimbus + Atlas · adapted 12 min ago" : `Nimbus is reading the sky over ${trip?.destination.city ?? "your city"}`}
           </div>
           <p style={{ margin: 0, fontSize: "clamp(15px,1.3vw,17px)", lineHeight: 1.5 }}>
+            {/* Nimbus used to announce a Montreal rain swap in full confidence while its
+                real answer was still in flight, then quietly replace it. Say what it is
+                doing instead of saying something it has not found. */}
             {advisory ? (
               advisory.body
-            ) : (
+            ) : showSeed ? (
               <>
                 Rain from 3–5&nbsp;PM. I moved <strong style={{ fontWeight: 700 }}>Mount Royal lookout</strong> to
                 Thursday morning and put <strong style={{ fontWeight: 700 }}>Pointe-à-Callière</strong> in its
                 place — it&rsquo;s 6 minutes from your lunch and indoors. Dash re-routed you off the 11 bus.
               </>
+            ) : (
+              <span style={{ opacity: 0.72 }}>
+                Checking today&rsquo;s forecast against your stops — I&rsquo;ll only move something if the
+                weather makes it worth it.
+              </span>
             )}
           </p>
         </div>
@@ -544,35 +656,37 @@ export default function Today() {
                 ["walk", "Walking", Footprints],
                 ["transit", "Transit", Train],
                 ["taxi", "Taxi", Car],
-              ] as const).map(([key, label, Icon]) => {
-                const on = mode === key;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => setMode(key)}
-                    aria-pressed={on}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      padding: "7px 13px",
-                      borderRadius: 999,
-                      border: `1px solid ${on ? "#17150F" : "var(--wl-line)"}`,
-                      background: on ? "#17150F" : "#FFFFFF",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      color: on ? "#FBF8F3" : "var(--wl-muted)",
-                    }}
-                  >
-                    <Icon size={16} strokeWidth={2} color="currentColor" />
-                    {label}
-                  </button>
-                );
-              })}
+              ] as const)
+                .filter(([key]) => key !== "transit" || transitAvailable)
+                .map(([key, label, Icon]) => {
+                  const on = mode === key;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setMode(key)}
+                      aria-pressed={on}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "7px 13px",
+                        borderRadius: 999,
+                        border: `1px solid ${on ? "#17150F" : "var(--wl-line)"}`,
+                        background: on ? "#17150F" : "#FFFFFF",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: on ? "#FBF8F3" : "var(--wl-muted)",
+                      }}
+                    >
+                      <Icon size={16} strokeWidth={2} color="currentColor" />
+                      {label}
+                    </button>
+                  );
+                })}
             </div>
           </div>
           <div style={{ position: "relative", height: "clamp(300px,38vw,420px)", background: "#EFEAE1" }}>
-            <MapFrame query={mapQuery} title={`${trip?.destination.city ?? "Montreal"} route — ${mode}`} />
+            <MapFrame query={mapQuery} title={`${trip?.destination.city ?? "Your"} route — ${mode}`} />
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, padding: "14px 18px", borderTop: "1px solid #F3EDE3", background: "var(--wl-bg)" }}>
             {(plan
@@ -600,18 +714,15 @@ export default function Today() {
                 {mode === "walk" ? "walking only" : mode === "transit" ? "transit" : "taxi / rideshare"}
               </Eyebrow>
               <span style={{ fontSize: 12.5, color: "var(--wl-muted)" }}>
-                {mode === "transit" && plan?.legs[0]?.transit.badge === "Walk instead"
-                  ? "No metro network mapped for this city yet — walking and taxi only."
+                {/* The old copy here read a short first leg as proof the city had no metro
+                    and said so. A short hop is a short hop; say that instead. */}
+                {mode === "transit" && plan && rideableLegs.length === 0
+                  ? "Every leg today is short enough that walking beats waiting."
                   : MODE_NOTE[mode]}
               </span>
             </div>
 
-            {planning && !plan && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--wl-muted)", fontSize: 13.5, padding: "12px 0" }}>
-                <span style={{ width: 14, height: 14, borderRadius: "50%", border: "2px solid #EDE5D8", borderTopColor: "#E0603C", animation: "wl-spin .9s linear infinite" }} />
-                Dash is costing every leg three ways…
-              </div>
-            )}
+            {planning && !plan && <Loader compact label="Dash is costing every leg three ways…" />}
 
             {!planning && !plan && (
               <div style={{ fontSize: 13.5, color: "var(--wl-muted)", padding: "12px 0" }}>
@@ -619,7 +730,7 @@ export default function Today() {
               </div>
             )}
 
-            {plan?.legs.map((l) => {
+            {plan?.legs.map((l, i) => {
               const row = l[mode];
               const badge = BADGES[row.kind];
               // What the other two modes would cost, skipping duplicates — the design's
@@ -644,6 +755,11 @@ export default function Today() {
                     <div style={{ fontSize: 12.5, color: "var(--wl-muted)", marginTop: 4 }}>
                       {others.length ? `Also: ${others.join("  ·  ")}` : "No faster option exists for this leg."}
                     </div>
+                    {/* Only where there is a fare to hail: a leg Dash refuses as too short
+                        to be worth a taxi has no ride to deep link to. */}
+                    {mode === "taxi" && row.kind === "taxi" && (
+                      <UberLink pickup={legEnd(i)} dropoff={legEnd(i + 1)} />
+                    )}
                   </div>
                   <div style={{ flex: "0 0 auto", textAlign: "right" }}>
                     <div style={{ fontSize: 14, fontWeight: 800 }}>{row.time}</div>
@@ -659,10 +775,17 @@ export default function Today() {
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
             <Eyebrow style={{ color: "#9C9482" }}>Today&rsquo;s plan</Eyebrow>
             <Link href="/itinerary" style={{ fontSize: 13, fontWeight: 700, color: "var(--wl-accent)" }}>
-              All 4 days →
+              All {itinerary?.days.length ?? 4} days →
             </Link>
           </div>
 
+          {stops.length === 0 && (
+            <p style={{ margin: "16px 0", color: "var(--wl-muted)", fontSize: 14.5 }}>
+              {loaded
+                ? `No plan for ${trip?.destination.city ?? "this trip"} yet — the crew has the trip but not the days.`
+                : "Loading your day…"}
+            </p>
+          )}
           {safeOrder.map((idx, i) => {
             const t = stops[idx];
             const slot = stops[i] ?? stops[stops.length - 1]; // the time slot belongs to the position, not the stop
@@ -787,12 +910,18 @@ export default function Today() {
           <div style={{ marginTop: 16, borderRadius: 20, padding: 18, background: "linear-gradient(135deg,#FFE9DC,#F4EBFB)", border: "1px solid #F2E4DA" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 7, fontFamily: MONO, fontSize: 10.5, letterSpacing: ".12em", textTransform: "uppercase", color: "#8C6A55", marginBottom: 8 }}>
               <Clock size={14} strokeWidth={2} color="currentColor" />
-              {rightNow ? rightNow.headline : "Right now · 2:40 PM · 3 h until dinner"}
+              {rightNow ? rightNow.headline : showSeed ? "Right now · 2:40 PM · 3 h until dinner" : "Right now · asking the crew"}
             </div>
             <p style={{ margin: "0 0 14px", fontSize: 15, color: "var(--wl-ink-2)" }}>
-              {rightNow
-                ? rightNow.narrative
-                : "You’re 400 m from Librairie Bertrand and the rain starts in 20 minutes. Books, then coffee next door, keeps you $12 under today."}
+              {rightNow ? (
+                rightNow.narrative
+              ) : showSeed ? (
+                "You’re 400 m from Librairie Bertrand and the rain starts in 20 minutes. Books, then coffee next door, keeps you $12 under today."
+              ) : (
+                <span style={{ opacity: 0.72 }}>
+                  Working out what is open, close and affordable around you at this hour.
+                </span>
+              )}
             </p>
             <button onClick={() => router.push("/now")} style={{ border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 14, fontWeight: 700, padding: "12px 20px", borderRadius: 999, width: "100%", maxWidth: 280, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
               <Sparkles size={16} strokeWidth={2} color="currentColor" />

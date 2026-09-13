@@ -52,6 +52,18 @@ Modelled and labelled as such: fares, per-mode durations and taxi prices. There 
 GTFS feed, so nothing pretends to be a timetable. Outside Montreal the app says
 *"no metro network mapped for this city yet"* rather than inventing a route.
 
+**Nothing shows another city's data.** There is a seeded Montreal trip so the app is never
+empty on a cold open, but it renders only while you are actually on that trip — every
+screen checks `showSeed` from `components/useTrip.ts`. On a real trip a screen with no data
+says so; it never quietly falls back to the demo. The traveller's currency follows the
+destination's country, and every amount on screen goes through `money()` in `lib/money.ts`,
+so a Barcelona trip is priced in euros rather than in dollars with a euro label.
+
+The plan itself is built to honour what you asked for: interests you named are queried by
+category in their own Overpass call, because a single "explore" query gets truncated
+upstream and a town with forty bookshops would otherwise return no parks at all. Variety is
+enforced both within a day and across the trip, so three days do not come back identical.
+
 ## Running it
 
 ```bash
@@ -95,7 +107,9 @@ app/
   api/             contract-shaped endpoints, live-backed with fixture fallbacks
 components/        ImageSlot, MapFrame, PlaceGallery, shared primitives
 lib/
-  trips/           prompt parsing, trip store, itinerary generation
+  trips/           prompt parsing, trip store, itinerary generation, browser trip cache
+  crew.ts          who answers what, which day a question is about, the plan's own notes
+  money.ts         currency by country, and the only place a currency symbol is written
   providers/       Nominatim, Overpass, Open-Meteo, OSRM, Exa, Wikipedia
   agents/          ranking, the "what should I do now" agent
   llm/             OpenRouter client: failover, JSON repair, quality gate
@@ -105,6 +119,25 @@ types/             THE CONTRACT — index.ts, providers.ts, agents.ts
 
 **`types/` is the contract and has a single owner.** Everything imports it; nobody edits
 it without asking. See [`AGENTS.md`](AGENTS.md).
+
+## The crew, and how it answers
+
+The Crew screen (`/chat`) opens on the real run: the prompt you typed, then what each agent
+reported while building *this* plan. Questions are routed to whichever agent owns the beat —
+weather to Nimbus, fares to Dash, practicalities to Fixer — by keyword, not by a model call,
+because routing has to be instant and "will it rain" has never needed a language model.
+
+`POST /api/trips/:id/crew` carries the trip and the itinerary with the question, since the
+server keeps no state between requests. It resolves which day you mean ("tomorrow", a
+weekday, "day 2"), grounds the answer in that day's real stops, its real forecast and what
+is actually left of that day's budget, and offers nearby additions picked one-per-category
+so the answer is not six cafés.
+
+If you ask for a change — drop, move, pin, or "find me something cheaper" — it applies it
+to a copy of the itinerary, recomputes the day's totals and hands the new plan back, which
+the browser stores so every other screen updates. The model classifies what you asked; it
+never decides what the plan becomes. If it cannot find the stop you named it changes
+nothing and says so, rather than guessing at the priciest one.
 
 ## Docs
 

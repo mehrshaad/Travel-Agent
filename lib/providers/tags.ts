@@ -49,3 +49,17 @@ export function categoryOf(tags: Record<string, string>): PlaceCategory | null {
 export function defOf(cat: PlaceCategory): CategoryDef {
   return CATEGORIES[cat] ?? { selectors: [], section: "explore", ambience: "mixed", interests: [], minutes: 30 };
 }
+
+/**
+ * Which categories serve an interest.
+ *
+ * A single "explore" query is truncated by Overpass before anything is ranked, so in a
+ * town with forty bookshops the parks never came back at all — and a traveller who asked
+ * for parks got none. Asking for their categories by name fixes that at one extra call.
+ */
+export function categoriesForInterests(interests: string[]): PlaceCategory[] {
+  const wanted = new Set(interests);
+  return (Object.entries(CATEGORIES) as [PlaceCategory, CategoryDef][])
+    .filter(([, def]) => def.interests.some((i) => wanted.has(i)))
+    .map(([category]) => category);
+}

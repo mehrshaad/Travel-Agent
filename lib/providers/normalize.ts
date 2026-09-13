@@ -1,4 +1,5 @@
-import type { LatLng, Place } from "@/types";
+import type { CurrencyCode, LatLng, Place } from "@/types";
+import { convert, currencyFor } from "@/lib/money";
 import { categoryOf, defOf } from "./tags";
 import { parseHours } from "./hours";
 
@@ -11,8 +12,13 @@ interface OverpassElement {
   tags?: Record<string, string>;
 }
 
-/** Rough per-person cost by category — OSM carries no prices, so these are estimates. */
-const COST: Partial<Record<string, number>> = {
+/**
+ * Rough per-person cost by category, in USD — OSM carries no prices, so these are
+ * estimates. They are written in one currency and converted at the point of use: when
+ * they were quoted directly in the destination's currency the number was never touched,
+ * so a Tokyo café came back as ¥7 against a real price nearer ¥500.
+ */
+const COST_USD: Partial<Record<string, number>> = {
   museum: 22, gallery: 15, historic: 13, landmark: 0, park: 0, viewpoint: 0,
   restaurant: 28, cafe: 7, bakery: 6, bar: 18, bookstore: 0, shopping: 0,
   nightlife: 20, pharmacy: 0, grocery: 0, convenience: 0, atm: 0, laundry: 6,
@@ -36,7 +42,10 @@ export function toPlace(el: OverpassElement, countryCode?: string): Place | null
   if (!coords) return null;
 
   const def = defOf(category);
-  const cost = COST[category] ?? 0;
+  // The estimate is a local price, so it is quoted in the money the country actually
+  // spends. A flat "CAD" put dollar signs on every café in Lisbon.
+  const currency = currencyFor(undefined, countryCode) as CurrencyCode;
+  const cost = convert(COST_USD[category] ?? 0, "USD", currency);
 
   // OSM carries no ratings and almost never a price level. They stay undefined —
   // never 0, which downstream filters would read as "terrible" and delete.
@@ -50,14 +59,16 @@ export function toPlace(el: OverpassElement, countryCode?: string): Place | null
     coords,
     address: [tags["addr:housenumber"], tags["addr:street"]].filter(Boolean).join(" ") || undefined,
     ambience: def.ambience,
-    avgCost: { amount: cost, currency: "CAD" },
+    avgCost: { amount: cost, currency },
     durationMinutes: def.minutes,
     openingHours: parseHours(tags.opening_hours, countryCode, coords),
     url: tags.website || tags["contact:website"],
     description: tags.description,
     tags: Object.keys(tags).slice(0, 12),
-    // 0.9 when the name and category came from real tags; lower as we infer more.
-    confidence: tags.opening_hours ? 0.9 : 0.7,
+    // 0.9 when the name and category came from real tags; lower as we infer more. A
+    // non-zero price is the largest inference on the record — a category average run
+    // through a hardcoded exchange rate — so it costs the place a step of confidence.
+    confidence: tags.opening_hours ? (cost > 0 ? 0.8 : 0.9) : cost > 0 ? 0.6 : 0.7,
   };
 }
 

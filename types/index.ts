@@ -13,7 +13,13 @@ export type ISODate = string;
 export type ISODateTime = string;
 export type Minutes = number;
 export type Meters = number;
-export type CurrencyCode = "CAD" | "USD" | "EUR" | "GBP";
+/**
+ * ISO 4217, e.g. "EUR", "JPY".
+ *
+ * Deliberately not a closed union: the app plans trips to any country, and a four-value
+ * union meant a Tokyo trip could not name its own currency.
+ */
+export type CurrencyCode = string;
 
 export interface Money {
   amount: number;
@@ -113,6 +119,8 @@ export interface Destination {
   query: string;
   city: string;
   country: string;
+  /** ISO 3166-1 alpha-2, lowercase. Absent when the geocoder did not report one. */
+  countryCode?: string;
   coords: LatLng;
   /** IANA, e.g. "America/Toronto". All ISODateTime use this offset. */
   timezone: string;
@@ -382,6 +390,23 @@ export interface ProfileChange {
   cause: string;
 }
 
+/**
+ * What the browser remembers about a traveller between trips, so an answer given once is
+ * never asked for again. Every field is optional: it fills up one answer at a time.
+ */
+export interface SavedTraveller {
+  interests?: Interest[];
+  /** Only meaningful read next to `currency` — see bandFor() in lib/profile. */
+  budgetBand?: BudgetBand;
+  dailyBudget?: number;
+  currency?: CurrencyCode;
+  pace?: Pace;
+  dietary?: DietaryTag[];
+  avoid?: string[];
+  travellers?: number;
+  updatedAt?: ISODateTime;
+}
+
 export interface UserProfile {
   userId: string;
   tripId?: string;
@@ -539,6 +564,23 @@ export type ApiResponse<T> =
 /* ============================================================
  * 16. Requests
  * ========================================================== */
+
+/**
+ * A fact the crew cannot honestly plan without.
+ *
+ * "destination" is enforced before a trip exists — POST /api/trips fails outright when no
+ * findable city was named — so it never reaches the UI in `missing`.
+ */
+export type TripFact = "destination" | "days" | "dailyBudget" | "interests";
+
+export interface CreateTripResult {
+  trip: Trip;
+  /** Inferred rather than read, so the UI can confirm it. */
+  assumed: string[];
+  /** Required facts the sentence never gave. The UI must collect these before planning. */
+  missing: TripFact[];
+  parsedBy: "model" | "rules";
+}
 
 export interface CreateTripRequest {
   /** Natural language. Parsed by the Orchestrator. */

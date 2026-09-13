@@ -4,6 +4,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/mock/ui";
+import { tripNeeds } from "@/lib/profile";
+import { useTrip } from "@/components/useTrip";
+import { AppBoot } from "@/components/AppBoot";
 import { useEffect, useState } from "react";
 import { CopilotKit } from "@copilotkit/react-core";
 import { CopilotSidebar } from "@copilotkit/react-ui";
@@ -12,6 +15,18 @@ import "@copilotkit/react-ui/styles.css";
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { trip, city, loaded } = useTrip();
+
+  // Every screen below reads the trip as fact. If the crew never got the length, the
+  // budget or a single interest, what it renders is guesswork wearing a plan's clothes —
+  // so the shell stays shut until onboarding has collected them. The seeded demo trip
+  // has no pending facts, so a cold open still lands straight on it.
+  const [held, setHeld] = useState(false);
+  useEffect(() => {
+    if (!loaded || !trip || tripNeeds(trip).pending.length === 0) return;
+    setHeld(true);
+    router.replace("/onboarding");
+  }, [loaded, trip, router]);
 
   // CopilotKit 1.71 calls new URL(runtimeUrl) with no base, so a relative path throws
   // "Invalid URL" — and it also refuses to render without one, so it cannot simply be
@@ -22,6 +37,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   /** Place detail is reached from Today, so Today stays lit while you're on it. */
   const activeKey = pathname.startsWith("/place") ? "today" : pathname.slice(1);
+
+  // Nothing on the way out: a flash of an invented itinerary is the thing being fixed.
+  if (held) return <div style={{ minHeight: "100vh" }} />;
 
   return (
     <CopilotKit runtimeUrl={runtimeUrl}>
@@ -139,6 +157,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
+      <AppBoot />
+
       <main style={{ flex: 1, padding: "clamp(18px,3vw,34px) clamp(16px,3vw,34px) 64px" }}>{children}</main>
 
       {/* The crew, reachable from any screen. It can read the trip and act on it —
@@ -147,13 +167,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         labels={{
           title: "Ask the crew",
           initial:
-            "I can see your plan, the forecast and what you have left to spend. Try: " +
-            "\"move the bookstore before lunch\", \"what should I do right now?\", or " +
-            "\"I only have $20 left\".",
+            `I can see your ${city ? `${city} ` : ""}plan, the forecast and what you have left to spend. Try: ` +
+            "\"move the bookshop before lunch\", \"what should I do right now?\", or " +
+            `\"I only have ${Math.round((trip?.preferences.dailyBudget.amount ?? 100) / 5)} ${trip?.preferences.dailyBudget.currency ?? "dollars"} left\".`,
         }}
         instructions={
           "You are Waylo's travel crew: Atlas orchestrates, Nimbus watches weather, Morsel handles food, " +
-          "Dash handles transport, Echo learns preferences. You are helping someone mid-trip in Montreal.\n" +
+          `Dash handles transport, Echo learns preferences. You are helping someone mid-trip in ${city ?? "the city they are visiting"}` +
+          `${trip ? `, ${trip.destination.country}` : ""}. Their daily budget is ${trip?.preferences.dailyBudget.amount ?? "unknown"} ` +
+          `${trip?.preferences.dailyBudget.currency ?? ""}. Never name a place in another city.\n` +
           "RULES:\n" +
           "1. Use ONLY the readable context and what actions return. Never invent a place, price, distance " +
           "or opening time. If you do not know, say so and offer to check with whatShouldIDoNow.\n" +

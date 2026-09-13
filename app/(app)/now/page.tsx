@@ -2,40 +2,72 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import type { NowSuggestion } from "@/types";
+import type { LatLng, Money, NowSuggestion } from "@/types";
 import { Eyebrow, MONO, SERIF } from "@/components/ui";
+import { Loader } from "@/components/RouteProgress";
+import { useTrip } from "@/components/useTrip";
+import { currentTripId } from "@/lib/trips/client";
+import { money, symbolFor } from "@/lib/money";
 
-const MONTREAL = { lat: 45.5017, lng: -73.5673 };
+type Source = "gps" | "city";
 
-type Source = "gps" | "stay" | "default";
+/**
+ * A per-category estimate, not a quoted price. The currency comes from the place, which
+ * the normalizer derives from the destination's country — typing a "$" here is how a
+ * Barcelona café ended up costing Canadian dollars.
+ */
+function price(cost: Money | undefined) {
+  return cost?.amount ? money(cost.amount, cost.currency) : "Free";
+}
 
 /**
  * "What should I do right now?" against live data.
  *
  * Context comes from the browser: real coordinates when permission is granted, the
- * booked hotel when it is not. Everything downstream — weather, what is open, what
- * fits the remaining budget — is computed from that, so the answer changes with the
+ * trip's own destination when it is not. Everything downstream — weather, what is open,
+ * what fits the remaining budget — is computed from that, so the answer changes with the
  * situation rather than being written in advance.
  */
 export default function NowPage() {
+  const { trip, itinerary, loaded, city } = useTrip();
   const [suggestion, setSuggestion] = useState<NowSuggestion | null>(null);
   const [state, setState] = useState<"idle" | "locating" | "thinking" | "done" | "error">("idle");
-  const [source, setSource] = useState<Source>("default");
+  const [source, setSource] = useState<Source>("city");
   const [error, setError] = useState<string | null>(null);
-  const [remaining, setRemaining] = useState(86);
+  const [override, setOverride] = useState<number | null>(null);
+
+  const currency = trip?.preferences.dailyBudget.currency ?? "USD";
+  // `day.date` is written in the destination's timezone, so the lookup has to be too. In
+  // UTC it missed for most of a Tokyo morning, and `remaining` silently became the whole
+  // daily budget — a number the ranker then used and the narrative quoted back.
+  const there = new Date().toLocaleDateString("en-CA", { timeZone: trip?.destination.timezone });
+  const today = itinerary?.days.find((d) => d.date === there);
+  // The day's ceiling less what the plan already spends today. The old fixed 86 was
+  // neither this traveller's budget nor their currency, and the crew ranked against it.
+  const remaining =
+    override ??
+    Math.max(0, (trip?.preferences.dailyBudget.amount ?? 0) - (today?.totals.estimatedCost.amount ?? 0));
 
   const ask = useCallback(
-    async (coords: { lat: number; lng: number }, src: Source) => {
+    async (coords: LatLng, src: Source) => {
       setSource(src);
       setState("thinking");
       setError(null);
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 20000);
       try {
-        const res = await fetch("/api/trips/trip_montreal_demo/now", {
+        const res = await fetch(`/api/trips/${currentTripId()}/now`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ location: coords, remaining }),
+          // The crew parses opening hours against a country's holidays and quotes the
+          // budget back in the narrative, so both travel with the request.
+          body: JSON.stringify({
+            location: coords,
+            remaining,
+            countryCode: trip?.destination.countryCode,
+            currency,
+            interests: trip?.preferences.interests,
+          }),
           signal: controller.signal,
         });
         const body = await res.json();
@@ -50,34 +82,45 @@ export default function NowPage() {
         clearTimeout(timer);
       }
     },
-    [remaining],
+    [remaining, currency, trip],
   );
 
   const locateThenAsk = useCallback(() => {
+    // The only honest fallback is the city the traveller is actually visiting. This used
+    // to be Montreal's coordinates, captioned as a hotel nobody had booked.
+    const fallback = trip?.destination.coords ?? null;
+    const askFallback = () => {
+      if (fallback) {
+        void ask(fallback, "city");
+        return;
+      }
+      setError("we need either your location or a destination to answer");
+      setState("error");
+    };
+
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      void ask(MONTREAL, "stay");
+      askFallback();
       return;
     }
     setState("locating");
     navigator.geolocation.getCurrentPosition(
       (pos) => void ask({ lat: pos.coords.latitude, lng: pos.coords.longitude }, "gps"),
-      // Denied or unavailable is not an error — fall back to the booked hotel.
-      () => void ask(MONTREAL, "stay"),
+      // Denied or unavailable is not an error — answer from the destination instead.
+      askFallback,
       { timeout: 8000, maximumAge: 60000 },
     );
-  }, [ask]);
+  }, [ask, trip]);
 
   useEffect(() => {
-    locateThenAsk();
+    // Waits for the trip: asking before it loaded meant asking about the wrong city.
+    if (loaded) locateThenAsk();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loaded]);
 
   const sourceLabel =
     source === "gps"
       ? "your actual location"
-      : source === "stay"
-        ? "Hôtel Nelligan, your booked stay"
-        : "the city centre";
+      : `the centre of ${city ?? "your destination"} — allow location for something closer`;
 
   const w = suggestion?.constraints.weather;
 
@@ -112,8 +155,8 @@ export default function NowPage() {
             type="number"
             value={remaining}
             min={0}
-            onChange={(e) => setRemaining(Number(e.target.value) || 0)}
-            aria-label="Budget remaining today, in dollars"
+            onChange={(e) => setOverride(Number(e.target.value) || 0)}
+            aria-label={`Budget remaining today, in ${symbolFor(currency)}`}
             style={{ width: 78, border: "1px solid var(--wl-line)", borderRadius: 999, padding: "8px 12px", font: "inherit", fontSize: 13.5, background: "#FFF" }}
           />
         </label>
@@ -133,10 +176,13 @@ export default function NowPage() {
       )}
 
       {(state === "locating" || state === "thinking") && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--wl-muted)", fontSize: 14 }}>
-          <span style={{ width: 15, height: 15, borderRadius: "50%", border: "2px solid #EDE5D8", borderTopColor: "#E0603C", animation: "wl-spin .9s linear infinite" }} />
-          {state === "locating" ? "Asking your browser where you are…" : "Checking the forecast and what is open nearby…"}
-        </div>
+        <Loader
+          label={
+            state === "locating"
+              ? "Asking your browser where you are…"
+              : "Checking the forecast and what is open nearby…"
+          }
+        />
       )}
 
       {state === "done" && suggestion && (
@@ -150,9 +196,7 @@ export default function NowPage() {
               <div key={o.place.id} style={{ background: "#FFF", border: "1px solid var(--wl-line)", borderRadius: 20, padding: 16 }}>
                 <div style={{ display: "flex", gap: 8, justifyContent: "space-between", alignItems: "baseline" }}>
                   <span style={{ fontSize: 15.5, fontWeight: 700 }}>{o.place.name}</span>
-                  <span style={{ fontSize: 13, fontWeight: 800 }}>
-                    {o.place.avgCost?.amount ? `$${o.place.avgCost.amount}` : "Free"}
-                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 800 }}>{price(o.place.avgCost)}</span>
                 </div>
                 <div style={{ fontSize: 12.5, color: "var(--wl-muted)", marginTop: 3 }}>
                   {o.place.category} · {o.distanceMeters} m · {o.travelTime?.minutes} min walk

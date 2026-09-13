@@ -1,3 +1,4 @@
+import { money } from "@/lib/money";
 import type {
   Explanation, LatLng, NowSuggestion, Place, Recommendation, ReplanEvent, WeatherDay, WeatherHour,
 } from "@/types";
@@ -30,7 +31,7 @@ export function hourNow(day: WeatherDay | null): WeatherHour | undefined {
  */
 export function rank(
   places: Place[],
-  opts: { from: LatLng; weather?: WeatherHour; remainingBudget: number; interests: string[]; maxWalkMeters: number; at?: Date },
+  opts: { from: LatLng; weather?: WeatherHour; remainingBudget: number; interests: string[]; maxWalkMeters: number; at?: Date; currency?: string },
 ): Recommendation[] {
   const at = opts.at ?? new Date();
   const wetOutside = opts.weather ? !opts.weather.outdoorFriendly : false;
@@ -55,7 +56,7 @@ export function rank(
       const budgetScore = cost === 0 ? 1 : cost <= opts.remainingBudget ? 0.8 : 0.15;
       if (cost === 0) factors.push({ kind: "budget", label: "Free", weight: 0.5 });
       else if (cost > opts.remainingBudget) {
-        factors.push({ kind: "budget", label: `$${cost} is over what's left today`, weight: -0.6 });
+        factors.push({ kind: "budget", label: `${money(cost, opts.currency)} is over what's left today`, weight: -0.6 });
       }
 
       const distScore = Math.max(0, 1 - distance / (opts.maxWalkMeters || 3000));
@@ -109,6 +110,7 @@ export function buildNow(
   weather: WeatherHour | undefined,
   location: LatLng,
   remainingBudget: number,
+  currency = "USD",
 ): NowSuggestion {
   const top = ranked.slice(0, 3);
   const first = top[0];
@@ -125,8 +127,8 @@ export function buildNow(
   const narrative = first
     ? `It is ${Math.round(weather?.tempC ?? 0)}°C${rainSoon ? " and rain is moving in" : " and dry"}. ` +
       `${first.place.name} is ${first.distanceMeters! < 1000 ? `${first.distanceMeters} m` : `${(first.distanceMeters! / 1000).toFixed(1)} km`} away` +
-      `${first.place.avgCost?.amount ? `, about $${first.place.avgCost.amount}` : ", free"}, ` +
-      `which keeps you inside the $${remainingBudget} you have left today. ${first.why.text}.`
+      `${first.place.avgCost?.amount ? `, about ${money(first.place.avgCost.amount, currency)}` : ", free"}, ` +
+      `which keeps you inside the ${money(remainingBudget, currency)} you have left today. ${first.why.text}.`
     : "Nothing nearby matches your preferences and budget at this hour. Widen the radius or try again later.";
 
   return {
@@ -136,7 +138,7 @@ export function buildNow(
     constraints: {
       now: new Date().toISOString(),
       weather,
-      remainingToday: { amount: remainingBudget, currency: "CAD" },
+      remainingToday: { amount: remainingBudget, currency },
       location,
     },
     generatedAt: new Date().toISOString(),

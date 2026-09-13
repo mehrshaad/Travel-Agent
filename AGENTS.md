@@ -226,6 +226,40 @@ These are constraints, not suggestions. Verified 2026-09-12.
 
 ---
 
+## 8b. Traps this codebase has already sprung
+
+Each of these cost real debugging time. Read them before you spend that time again.
+
+- **The disk cache outlives your code change.** `lib/cache/diskCache.ts` writes to `.cache/`
+  locally and `/tmp/.cache` on Vercel. Cached values are whole objects, so when you add a
+  field to something that gets cached — `Destination` gaining `countryCode`, say — old
+  entries are not merely stale, they are missing data the app now requires. **Bump the
+  version segment in the cache key** (`normalizeKey(["nominatim", "v4", query])`) whenever
+  a cached shape changes. Deleting `.cache` fixes your laptop and nobody else's.
+- **Never run `next build` while `next dev` is running.** It overwrites the dev server's
+  chunks and the running app breaks in ways that look like your code (unstyled sidebars,
+  underlined nav). Kill dev first.
+- **Seeded content needs `showSeed`, not a `??`.** `components/useTrip.ts` exposes
+  `showSeed`, which is true only when the browser is on the demo trip *and* the trip has
+  finished loading. A `trip?.destination.city ?? "Montreal"` renders Montreal on the first
+  frame of every trip, and a `?? DEMO_DATA` renders it forever when a fetch fails.
+- **The trip lives in the browser.** Vercel routes each request to whatever instance is
+  warm, so the one that created a trip is rarely the one that answers about it. Any route
+  needing the trip must be POSTed it (see `lib/trips/client.ts`). Routes that only guard on
+  `knownTrip(id)` should be addressed with `DEMO_TRIP_ID` in the path while every real fact
+  travels in the query string.
+- **Overpass truncates before you rank.** A single `section: "explore"` query in a
+  bookshop-dense town returns no parks at all. Ask for the categories you actually need by
+  name (`categoriesForInterests` in `lib/providers/tags.ts`).
+- **Nominatim needs `accept-language=en` as a query parameter.** The `Accept-Language`
+  header alone is ignored by `jsonv2`, and Tokyo comes back as 東京都.
+- **Opening hours are local.** `openAt` compares against a wall clock; pass the
+  destination's IANA timezone or you will compute the wrong hour and, often, the wrong
+  weekday.
+- **Never type a currency symbol into a string.** Everything goes through `money()` in
+  `lib/money.ts`. A `$` hardcoded next to a number is how a Barcelona trip quoted euros in
+  dollars, and a dollar-sized constant relabelled as JPY is how a coffee cost ¥7.
+
 ## 9. Working agreements
 
 - **Blocked more than 20 minutes → say so in the team channel.** Grinding alone is the

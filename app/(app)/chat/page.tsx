@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { MessageCircle, Send } from "lucide-react";
 import { CREW, INITIAL_CHAT, REPLIES, type ChatMessage } from "@/lib/mock/ui";
+import { useTrip } from "@/components/useTrip";
+import { askCrew, currentPrompt } from "@/lib/trips/client";
+import { crewNotes } from "@/lib/crew";
+import { money } from "@/lib/money";
+import { Loader } from "@/components/RouteProgress";
 import { Eyebrow, MONO, SERIF } from "@/components/ui";
 
 const ATLAS_FALLBACK =
@@ -10,48 +15,79 @@ const ATLAS_FALLBACK =
   "change the plan for you.";
 
 export default function CrewChat() {
-  const [chat, setChat] = useState<ChatMessage[]>(INITIAL_CHAT);
+  const { trip, itinerary, loaded, city, showSeed } = useTrip();
+  const [said, setSaid] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
-
-  const ask = (label: string) => {
-    const r = REPLIES[label];
-    setChat((c) => c.concat([{ user: true, text: label }, { agent: r.who, role: r.role, color: r.color, text: r.text }]));
-  };
-
   const [thinking, setThinking] = useState(false);
+  const [changed, setChanged] = useState<string | null>(null);
 
   /**
-   * Ask the live crew rather than replaying one canned paragraph. The ✨ endpoint knows
-   * the real weather, what is open nearby and the remaining budget, so the answer
-   * actually responds to the question.
+   * The screen opens on the real run: what the traveller typed, then what each agent
+   * reported while building this plan. It used to open on a transcript of a Montreal
+   * weekend nobody in this session had taken.
    */
-  const send = async () => {
-    const d = draft.trim();
+  const opening = useMemo<ChatMessage[]>(() => {
+    if (trip && itinerary) {
+      const prompt = currentPrompt();
+      const notes = crewNotes(trip, itinerary).map((n) => ({ agent: n.agent, role: n.role, color: n.color, text: n.text }));
+      return prompt ? [{ user: true, text: prompt }, ...notes] : notes;
+    }
+    return showSeed ? INITIAL_CHAT : [];
+  }, [trip, itinerary, showSeed]);
+
+  const chat = opening.concat(said);
+
+  /**
+   * Prompts drawn from this trip. The four canned Montreal questions were the only way
+   * in, and every one of them was about a city the traveller was not in.
+   */
+  const prompts = useMemo(() => {
+    if (!trip || !itinerary?.days.length) return showSeed ? Object.keys(REPLIES) : [];
+    const currency = trip.preferences.dailyBudget.currency;
+    const next = itinerary.days[0]?.items[0]?.place.name;
+    const dearest = itinerary.days
+      .flatMap((d) => d.items)
+      .sort((a, b) => b.estimatedCost.amount - a.estimatedCost.amount)[0];
+    return [
+      "What should I do right now?",
+      itinerary.days.length > 1 ? `What does the weather mean for tomorrow?` : "What does the weather mean for today?",
+      next ? `How do I get to ${next}?` : `What is worth seeing in ${trip.destination.city}?`,
+      dearest ? `${dearest.place.name} is ${money(dearest.estimatedCost.amount, currency)} — find me something cheaper` : `Am I under ${money(trip.preferences.dailyBudget.amount, currency)} a day?`,
+    ];
+  }, [trip, itinerary, showSeed]);
+
+  const ask = (label: string) => {
+    if (showSeed && REPLIES[label]) {
+      const r = REPLIES[label];
+      setSaid((c) => c.concat([{ user: true, text: label }, { agent: r.who, role: r.role, color: r.color, text: r.text }]));
+      return;
+    }
+    void send(label);
+  };
+
+  /**
+   * One endpoint answers and, when the traveller asked for a change, makes it. The crew
+   * carries the plan with the question, so "what about tomorrow" is answered against
+   * tomorrow rather than against whatever happens to be open right now.
+   */
+  const send = async (text?: string) => {
+    const d = (text ?? draft).trim();
     if (!d || thinking) return;
-    setDraft("");
-    setChat((c) => c.concat([{ user: true, text: d }]));
+    if (!text) setDraft("");
+    setSaid((c) => c.concat([{ user: true, text: d }]));
     setThinking(true);
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 25000);
-    try {
-      const res = await fetch("/api/trips/trip_montreal_demo/now", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: controller.signal,
-        body: JSON.stringify({ location: { lat: 45.5017, lng: -73.5673 }, remaining: 86, question: d }),
-      });
-      const body = await res.json();
-      const text = body?.ok
-        ? `${body.data.headline} ${body.data.narrative}`
-        : ATLAS_FALLBACK;
-      setChat((c) => c.concat([{ agent: "Atlas", role: "orchestrator", color: "#7A5AF8", text }]));
-    } catch {
-      setChat((c) => c.concat([{ agent: "Atlas", role: "orchestrator", color: "#7A5AF8", text: ATLAS_FALLBACK }]));
-    } finally {
-      clearTimeout(timer);
-      setThinking(false);
-    }
+    const answer = await askCrew(d, trip?.destination.coords);
+    setSaid((c) =>
+      c.concat([
+        answer
+          ? { agent: answer.agent, role: answer.role, color: answer.color, text: answer.text }
+          : { agent: "Atlas", role: "orchestrator", color: "#7A5AF8", text: ATLAS_FALLBACK },
+      ]),
+    );
+    // A change lands in sessionStorage, and every other screen reads from there.
+    if (answer?.change) setChanged(answer.change);
+    setThinking(false);
   };
 
   return (
@@ -60,7 +96,7 @@ export default function CrewChat() {
         <div>
           <Eyebrow style={{ marginBottom: 7, display: "flex", alignItems: "center", gap: 7 }}>
             <MessageCircle size={14} strokeWidth={2} color="currentColor" />
-            8 agents on duty · Atlas answering first
+            {CREW.length} agents on duty{city ? ` · ${city}` : ""}
           </Eyebrow>
           <h1 style={{ margin: 0, fontFamily: SERIF, fontWeight: 400, fontSize: "clamp(28px,3.6vw,40px)", lineHeight: 1.05 }}>
             Ask the crew
@@ -116,7 +152,7 @@ export default function CrewChat() {
             >
               <div style={{ flex: "0 0 auto", width: 34, height: 34, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", gap: 4, background: isUser ? "#EDE5D8" : m.color }}>
                 {isUser ? (
-                  <span style={{ fontSize: 12, fontWeight: 800, color: "var(--wl-muted)" }}>SA</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: "var(--wl-muted)" }}>You</span>
                 ) : (
                   <>
                     <span style={{ width: 4.5, height: 4.5, borderRadius: "50%", background: "rgba(0,0,0,.6)", animation: wink ? "none" : `wl-blink ${eyeDur} infinite`, animationDelay: eyeDelay }} />
@@ -146,8 +182,24 @@ export default function CrewChat() {
           );
         })}
 
+        {changed && (
+          <div style={{ display: "flex", gap: 10, alignItems: "center", padding: "11px 14px", borderRadius: 14, background: "#EAF4F2", color: "#0F6F68", fontSize: 13.5, fontWeight: 700, marginBottom: 14 }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "currentColor" }} />
+            {changed} Your itinerary is updated.
+          </div>
+        )}
+
+        {thinking && <Loader compact label="The crew is checking…" />}
+
+        {loaded && chat.length === 0 && (
+          <p style={{ margin: "8px 0 16px", color: "var(--wl-muted)", fontSize: 15 }}>
+            No plan to talk about yet. Describe your trip on the home screen and the crew will have
+            something to say.
+          </p>
+        )}
+
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "18px 0 14px" }}>
-          {Object.keys(REPLIES).map((label) => (
+          {prompts.map((label) => (
             <button
               key={label}
               onClick={() => ask(label)}
@@ -162,11 +214,11 @@ export default function CrewChat() {
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && send()}
-            placeholder="Ask about food, weather, money, anything…"
+            onKeyDown={(e) => e.key === "Enter" && void send()}
+            placeholder={city ? `Ask about ${city} — food, weather, money, anything…` : "Ask about food, weather, money, anything…"}
             style={{ flex: "1 1 220px", minWidth: 0, border: "1px solid var(--wl-line)", borderRadius: 999, padding: "13px 18px", font: "inherit", fontSize: 14.5, outline: "none", background: "var(--wl-bg)", color: "var(--wl-ink)" }}
           />
-          <button onClick={send} disabled={thinking} style={{ flex: "0 0 auto", border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 14, fontWeight: 700, padding: "13px 22px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8, opacity: thinking ? 0.6 : 1 }}>
+          <button onClick={() => void send()} disabled={thinking} style={{ flex: "0 0 auto", border: 0, background: "var(--wl-ink)", color: "var(--wl-bg)", fontSize: 14, fontWeight: 700, padding: "13px 22px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8, opacity: thinking ? 0.6 : 1 }}>
             Send
             <Send size={16} strokeWidth={2} color="currentColor" />
           </button>

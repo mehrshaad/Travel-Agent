@@ -20,6 +20,10 @@ export function useLive<T>(url: string, init?: RequestInit, timeoutMs = 12000): 
   const [state, setState] = useState<LiveState<T>>({ data: null, loading: true, error: null, live: false });
 
   useEffect(() => {
+    // Screens that need the trip first pass "" until it loads. Fetching before then
+    // asked the wrong city and flashed Montreal results.
+    if (!url) return;
+
     let cancelled = false;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);

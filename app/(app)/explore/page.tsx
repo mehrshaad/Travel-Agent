@@ -1,5 +1,8 @@
 "use client";
 
+import { useTrip } from "@/components/useTrip";
+import { exploreUrl } from "@/components/PlaceDetail";
+
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { BookOpen, Coffee, Compass, House, Landmark, Moon, Tag, Utensils } from "lucide-react";
@@ -9,6 +12,7 @@ import type { Recommendation } from "@/types";
 import { ImageSlot } from "@/components/ImageSlot";
 import { slugify } from "@/lib/slug";
 import { photoFor } from "@/lib/photos";
+import { Loader } from "@/components/RouteProgress";
 import { MONO, SERIF } from "@/components/ui";
 
 /** One icon per filter chip; anything unmapped simply renders without one. */
@@ -42,11 +46,14 @@ function matches(cat: string, p: (typeof PLACES)[number]) {
 export default function Explore() {
   const router = useRouter();
   const [cat, setCat] = useState("All");
+  const { trip, city, loaded, showSeed } = useTrip();
 
   // Live places from OpenStreetMap, ranked server-side. If the upstream is slow or
   // down we fall back to the curated list and say so rather than showing nothing.
+  // Waits for the trip: firing early asked Overpass about Montreal and flashed the
+  // wrong city's results before correcting itself.
   const live = useLive<Recommendation[]>(
-    "/api/trips/trip_montreal_demo/recommendations?section=explore&limit=12&radius=1500",
+    loaded ? exploreUrl(trip, "&section=explore&limit=12&radius=1500") : "",
   );
   const badge = liveLabel(live);
 
@@ -55,7 +62,7 @@ export default function Explore() {
     meta: [r.place.category, r.place.rating ? `${r.place.rating} ★` : null, r.distanceMeters ? `${r.distanceMeters} m` : null]
       .filter(Boolean)
       .join(" · "),
-    price: r.place.avgCost?.amount ? `$${r.place.avgCost.amount}` : "Free",
+    price: r.place.avgCost?.amount ? `${r.place.avgCost.amount} ${r.place.avgCost.currency}` : "Free",
     why: r.why.text,
     agent: r.why.agent,
     agentColor: r.place.ambience === "indoor" ? "#1FA39A" : "#F2A93B",
@@ -65,13 +72,13 @@ export default function Explore() {
 
   // The chips must filter whatever is on screen. Previously live results bypassed the
   // filter entirely, so every chip looked broken once real data arrived.
-  const source = liveCards.length ? liveCards : PLACES;
+  const source = liveCards.length ? liveCards : showSeed ? PLACES : [];
   const filtered = source.filter((p) => matches(cat, p));
 
   return (
     <div style={{ animation: "wl-screen .46s cubic-bezier(.22,.68,.16,1) both", maxWidth: 1240, margin: "0 auto" }}>
       <h1 style={{ margin: "0 0 6px", fontFamily: SERIF, fontWeight: 400, fontSize: "clamp(28px,3.6vw,40px)", lineHeight: 1.05 }}>
-        Explore Montreal
+        Explore {city ?? (loaded ? "your city" : "…")}
       </h1>
       <p style={{ margin: "0 0 20px", color: "var(--wl-muted)", fontSize: 15.5, maxWidth: "56ch" }}>
         Ranked for you, not for everyone. Every card says which agent found it and why it survived the
@@ -112,6 +119,14 @@ export default function Explore() {
         })}
       </div>
 
+      {filtered.length === 0 &&
+        (live.loading || !loaded ? (
+          <Loader label={`Searching ${city ?? "your city"}…`} />
+        ) : (
+          <p style={{ margin: "30px 0", color: "var(--wl-muted)", fontSize: 15 }}>
+            {`Nothing ${cat === "All" ? "" : `under ${cat} `}came back for ${city ?? "this city"} — try another filter, or check back once OpenStreetMap responds.`}
+          </p>
+        ))}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(258px,1fr))", gap: 16 }}>
         {filtered.map((p, i) => (
           <button

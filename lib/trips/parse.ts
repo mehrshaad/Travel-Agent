@@ -41,13 +41,17 @@ export function parseHeuristically(prompt: string): ParsedPrompt {
   const money = prompt.match(/[$€£]\s*(\d+)|(\d+)\s*(?:usd|eur|gbp|cad|dollars?|euros?)/i);
   const dailyBudget = Number(money?.[1] ?? money?.[2] ?? 0) || 150;
 
+  // A typed symbol wins; otherwise the destination's own currency is filled in later,
+  // once geocoding says which country this is.
   const currency: CurrencyCode = /€|eur/i.test(prompt)
     ? "EUR"
     : /£|gbp/i.test(prompt)
       ? "GBP"
       : /\bcad\b/i.test(prompt)
         ? "CAD"
-        : "USD";
+        : /¥|jpy|yen/i.test(prompt)
+          ? "JPY"
+          : "USD";
 
   // "in Lisbon", "to Tokyo for", "I'm in Montreal" — otherwise the longest capitalised run.
   const explicit = prompt.match(/\b(?:in|to|visiting|going to)\s+([A-ZÀ-Ý][\w'’-]*(?:[ ,]+[A-ZÀ-Ý][\w'’-]*)*)/);
@@ -83,6 +87,15 @@ function validate(raw: unknown, fallback: ParsedPrompt): ParsedPrompt | null {
   const destination = typeof o.destination === "string" ? o.destination.trim() : "";
   if (!destination) return null;
 
+  // The model must READ the destination, not choose one. "I want to go somewhere nice"
+  // came back as a real town in India, which the geocoder then happily confirmed.
+  // Every word of the name has to appear in what the traveller actually wrote.
+  const haystack = (o.__prompt as string | undefined)?.toLowerCase() ?? "";
+  if (haystack) {
+    const words = destination.toLowerCase().split(/[\s,]+/).filter((w) => w.length > 1);
+    if (words.length && !words.some((w) => haystack.includes(w))) return null;
+  }
+
   const interests = Array.isArray(o.interests)
     ? (o.interests.filter((i): i is Interest => INTERESTS.includes(i as Interest)) as Interest[])
     : [];
@@ -115,9 +128,11 @@ export async function parsePrompt(prompt: string): Promise<{ parsed: ParsedPromp
       '{"destination":string,"days":number,"dailyBudget":number,"currency":"USD"|"EUR"|"GBP"|"CAD",' +
       `"interests":string[],"pace":"relaxed"|"balanced"|"packed","travelers":number}. ` +
       `interests must be chosen from: ${INTERESTS.join(", ")}. ` +
-      "destination is the city only. If something is not stated, infer a sensible value.",
+      "destination is the city only, copied from the traveller's own words — never a city they " +
+      "did not name. If they named no city, use an empty string. If anything else is not " +
+      "stated, infer a sensible value.",
     prompt,
-    (raw) => validate(raw, fallback),
+    (raw) => validate(typeof raw === "object" && raw ? { ...raw, __prompt: prompt } : raw, fallback),
     fallback,
     { role: "extract", maxTokens: 260, temperature: 0.1 },
   );

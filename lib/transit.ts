@@ -74,12 +74,33 @@ export interface TransitLeg {
 export interface TransitPlan {
   legs: TransitLeg[];
   totalMinutes: number;
-  fare: { amount: number; currency: "CAD" };
+  fare: { amount: number; currency: string };
   transfers: number;
   /** True when we could not find a metro path and this is a walk-only answer. */
   walkOnly: boolean;
+  /**
+   * True only when both ends sit inside the seeded network. `walkOnly` conflates
+   * "this city has no metro" with "this hop is too short", so callers that want to
+   * say "Métro" or "STM" rather than a neutral "Transit" read this instead.
+   */
+  inNetwork: boolean;
+  /**
+   * Whether transit is worth offering at all for this hop — a different question from
+   * whether we can plan it. Outside the seeded network `walkOnly` was being read as
+   * "nothing runs here", which told Tokyo it had no public transport. All we actually
+   * know outside Montreal is that we hold no fare or timetable data, so a hop long
+   * enough to ride is still rideable; the caller estimates it and says it is estimated.
+   */
+  rideable: boolean;
   note: string;
 }
+
+/**
+ * The seeded network is Montreal's, so its single fare is a real STM price in CAD and
+ * belongs in CAD wherever it is quoted. It lives here as one constant because the fare
+ * used to be written out separately per caller, and the two copies had drifted apart.
+ */
+export const NETWORK_FARE = { amount: 3.75, currency: "CAD" };
 
 function rideLeg(line: TransitLine, from: string, to: string): TransitLeg {
   const i = line.stations.indexOf(from);
@@ -108,30 +129,49 @@ function rideLeg(line: TransitLine, from: string, to: string): TransitLeg {
  * shared interchange. Two transfers are not attempted — on a four-line network they are
  * never needed, and guessing a third hop would be inventing a route.
  */
-export function planTransit(origin: LatLng, destination: LatLng, transitFare = 3.35): TransitPlan {
+export function planTransit(
+  origin: LatLng,
+  destination: LatLng,
+  transitFare = NETWORK_FARE.amount,
+  fareCurrency = NETWORK_FARE.currency,
+): TransitPlan {
   const a = nearestStop(origin);
   const b = nearestStop(destination);
-  const walkAllMin = Math.round((metres(origin, destination) / 1000 / WALK_KMH) * 60);
+  const straight = metres(origin, destination);
+  const walkAllMin = Math.round((straight / 1000 / WALK_KMH) * 60);
 
-  const walkOnly = (note: string): TransitPlan => ({
+  // The seeded network covers Montreal. Anywhere else the nearest station is hundreds
+  // of kilometres away, so refuse to route across it — which says nothing about whether
+  // that city has transit of its own, only that this file has never heard of it.
+  const SERVICE_RADIUS_M = 25000;
+  const inNetwork = !!a && !!b && a.metres <= SERVICE_RADIUS_M && b.metres <= SERVICE_RADIUS_M;
+
+  // Under roughly a kilometre the access walk and the headway cost more than the ride
+  // saves, in any city. That is the one honest reason to rule transit out unplanned.
+  const RIDEABLE_FROM_M = 1000;
+
+  const walkOnly = (note: string, rideable = false): TransitPlan => ({
     legs: [{ kind: "walk", text: "Walk the whole way", minutes: Math.max(1, walkAllMin) }],
     totalMinutes: Math.max(1, walkAllMin),
-    fare: { amount: 0, currency: "CAD" },
+    // No ride planned, so no fare — a caller estimating an unmapped city's fare prices
+    // it itself rather than inheriting a zero that looks like a free journey.
+    fare: { amount: 0, currency: fareCurrency },
     transfers: 0,
     walkOnly: true,
+    inNetwork,
+    rideable,
     note,
   });
 
-  // The seeded network covers Montreal. Anywhere else the nearest station is hundreds
-  // of kilometres away, so say there is no metro rather than invent a route across it.
-  const SERVICE_RADIUS_M = 25000;
-  if (!a || !b || a.metres > SERVICE_RADIUS_M || b.metres > SERVICE_RADIUS_M) {
-    return walkOnly("No metro network mapped for this city yet — walking and taxi only.");
+  if (!inNetwork || !a || !b) {
+    return walkOnly(
+      "No fare or timetable data for this city yet — any transit time here is estimated from distance.",
+      straight >= RIDEABLE_FROM_M,
+    );
   }
   if (a.stop.name === b.stop.name) return walkOnly("Both ends are at the same station — walking is quicker.");
 
-  // Below roughly a kilometre the metro loses to walking once you add access and headway.
-  if (metres(origin, destination) < 1000) {
+  if (straight < RIDEABLE_FROM_M) {
     return walkOnly("Under a kilometre — walking beats waiting for a train.");
   }
 
@@ -216,9 +256,11 @@ export function planTransit(origin: LatLng, destination: LatLng, transitFare = 3
     return {
       legs: best.legs,
       totalMinutes: best.minutes,
-      fare: { amount: transitFare, currency: "CAD" },
+      fare: { amount: transitFare, currency: fareCurrency },
       transfers: best.changes,
       walkOnly: false,
+      inNetwork,
+      rideable: true,
       note:
         best.changes === 0
           ? "One fare, no changes. Times are modelled from average headways, not a live timetable."

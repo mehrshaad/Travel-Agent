@@ -11,10 +11,13 @@ import { photo, type Photo } from "@/lib/photos";
  */
 export function PlaceGallery({
   hero,
+  heroSrc,
   name,
   gallerySlugs,
 }: {
   hero?: Photo;
+  /** For live places, whose photo comes from Wikimedia rather than our bundle. */
+  heroSrc?: string;
   name: string;
   gallerySlugs: string[];
 }) {
@@ -25,6 +28,7 @@ export function PlaceGallery({
       <ImageSlot
         placeholder={name}
         photo={main}
+        src={main ? undefined : heroSrc}
         radius={24}
         style={{ display: "block", width: "100%", height: "clamp(220px,30vw,320px)" }}
       />

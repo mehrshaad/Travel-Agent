@@ -1,10 +1,13 @@
 "use client";
 
+import { useTrip } from "@/components/useTrip";
+
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowRight, MapPin } from "lucide-react";
 import { CREW } from "@/lib/mock/ui";
 import { currentTripId, planTrip } from "@/lib/trips/client";
+import { money } from "@/lib/money";
 import { MONO, SERIF } from "@/components/ui";
 
 export default function Generating() {
@@ -12,26 +15,79 @@ export default function Generating() {
   const [genStep, setGenStep] = useState(0);
 
   const [failed, setFailed] = useState<string | null>(null);
+  /** Agents the server has actually logged a tool call for, and when it last ran. */
+  const [seen, setSeen] = useState<Record<string, number>>({});
+  /** True only once the plan itself has come back. */
+  const [planned, setPlanned] = useState(false);
+  const { trip, line } = useTrip();
+
+  /**
+   * What each agent is working on, in this city, for this budget.
+   *
+   * The seeded lines announced six Persian kitchens and a Tuesday rain window before the
+   * planner had looked at anything — convincing, and wrong for every trip but one.
+   */
+  const days = trip ? Math.round((Date.parse(trip.endDate) - Date.parse(trip.startDate)) / 86400000) + 1 : 0;
+  const cur = trip?.preferences.dailyBudget.currency ?? "USD";
+  const interests = trip?.preferences.interests ?? [];
+  const working: Record<string, string> = trip
+    ? {
+        Atlas: `Splitting ${days} ${days === 1 ? "day" : "days"} in ${trip.destination.city} into anchors`,
+        Nest: `Screening stays within walking distance of the plan`,
+        Morsel: `Kitchens under ${money(Math.round(trip.preferences.dailyBudget.amount / 3), cur)} a sitting${trip.preferences.dietary.length ? ` · ${trip.preferences.dietary.join(", ")}` : ""}`,
+        Muse: interests.length ? `${interests.slice(0, 3).join(" + ")} across ${trip.destination.city}` : `Scanning ${trip.destination.city} for things to see`,
+        Dash: `Costing every leg on foot before anything else`,
+        Nimbus: `Reading the forecast for ${new Date(`${trip.startDate}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })} onwards`,
+        Fixer: `Pharmacy, laundry and an ATM near your stops`,
+        Echo: `Holding you to ${money(trip.preferences.dailyBudget.amount, cur)} a day`,
+      }
+    : {};
 
   // The crew list animates while the real request runs. Whichever finishes last wins,
   // so the plan is always ready by the time Today renders.
   useEffect(() => {
     let done = false;
-    const t = setInterval(() => setGenStep((n) => Math.min(n + 1, CREW.length + 1)), 620);
+    // The marquee only ever advances to "working". It used to march every agent to
+    // "done" on a 620 ms timer while the real request was still in flight, which is
+    // exactly the kind of thing this product is supposed to not do.
+    const t = setInterval(() => setGenStep((n) => Math.min(n + 1, CREW.length)), 620);
+
+    // The real state: which agents the server has actually called an upstream for.
+    // On a cold serverless instance this can come back empty, in which case the marquee
+    // carries the display — but nothing is ever reported finished before it is.
+    const poll = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/trips/${currentTripId()}/activity`, { cache: "no-store" });
+        const body = await res.json();
+        if (!body?.ok) return;
+        const at: Record<string, number> = {};
+        for (const call of body.data.calls as { agent: string; ms: number }[]) {
+          at[call.agent] = (at[call.agent] ?? 0) + 1;
+        }
+        setSeen(at);
+      } catch {
+        /* the trace is a nicety; the plan itself is what matters */
+      }
+    }, 1200);
 
     (async () => {
       const itinerary = await planTrip(currentTripId());
       done = true;
       clearInterval(t);
+      clearInterval(poll);
       if (!itinerary) {
         setFailed("I could not reach enough places for that city just now.");
         return;
       }
+      setPlanned(true);
       router.push("/today");
     })();
 
     return () => {
-      if (!done) clearInterval(t);
+      if (!done) {
+        clearInterval(t);
+        clearInterval(poll);
+      }
     };
   }, [router]);
 
@@ -51,13 +107,13 @@ export default function Generating() {
         <div style={{ textAlign: "center", marginBottom: 34 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 7, fontFamily: MONO, fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: "var(--wl-muted)", marginBottom: 14 }}>
             <MapPin size={14} strokeWidth={2} color="currentColor" />
-            Montreal · Sep 15–19 · $150/day
+            {line ?? "Reading your trip…"}
           </div>
           <h2 style={{ margin: 0, fontFamily: SERIF, fontWeight: 400, fontSize: "clamp(30px,4.6vw,46px)", lineHeight: 1.1 }}>
             The crew is on it
           </h2>
           <p style={{ margin: "10px auto 0", maxWidth: "44ch", color: "var(--wl-muted)", fontSize: 15.5 }}>
-            Eight agents are negotiating your four days. You&rsquo;ll see every decision they make.
+            {CREW.length} agents are negotiating your {days ? `${days} ${days === 1 ? "day" : "days"}` : "trip"}. You&rsquo;ll see every decision they make.
           </p>
         </div>
 
@@ -71,8 +127,12 @@ export default function Generating() {
           }}
         >
           {CREW.map((a, i) => {
-            const status = genStep > i + 1 ? "done" : genStep === i + 1 ? "working…" : "queued";
-            const statusColor = genStep > i + 1 ? "#1FA39A" : genStep === i + 1 ? "#E0603C" : "#6B6458";
+            // "done" is reserved for work that has actually finished: the plan is back.
+            // Until then an agent is working if the server has logged a call for it, or
+            // if the marquee has reached it, and queued otherwise.
+            const started = Boolean(seen[a.name]) || genStep >= i + 1;
+            const status = planned ? "done" : started ? "working…" : "queued";
+            const statusColor = planned ? "#1FA39A" : started ? "#E0603C" : "#6B6458";
             // Every third agent winks (one eye) instead of blinking, and each gets its own
             // delay/duration so the crew never blinks in unison. Derived from i, so it is stable.
             const wink = i % 3 === 2;
@@ -107,7 +167,7 @@ export default function Generating() {
                       {a.role}
                     </span>
                   </div>
-                  <div style={{ fontSize: 13.5, color: "var(--wl-muted)", marginTop: 2 }}>{a.line}</div>
+                  <div style={{ fontSize: 13.5, color: "var(--wl-muted)", marginTop: 2 }}>{working[a.name] ?? a.line}</div>
                 </div>
                 <div style={{ flex: "0 0 auto", fontFamily: MONO, fontSize: 11.5, fontWeight: 500, color: statusColor }}>
                   {status}

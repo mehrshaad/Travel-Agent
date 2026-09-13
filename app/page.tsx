@@ -2,21 +2,72 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { ArrowRight, Brain, CloudRain, Eye, GraduationCap, Sparkles, Zap } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ArrowRight, CloudRain, Sparkles } from "lucide-react";
 import { EXAMPLES } from "@/lib/mock/ui";
+import { money } from "@/lib/money";
+import { factsIn, rememberNeeds } from "@/lib/profile";
 import { createTrip, rememberTrip } from "@/lib/trips/client";
+import { RouteProgress } from "@/components/RouteProgress";
+import type { CreateTripResult } from "@/types";
 import { MONO, SERIF } from "@/components/ui";
 
-const LOOP = [
-  ["01 · Perceive", "Weather, your location, the time, what you skipped and what's left in the budget."],
-  ["02 · Reason", "“Does today still make sense?” asked again every hour, not just once at booking."],
-  ["03 · Act", "Re-orders your day, re-routes transport, and tells you exactly why it changed."],
-  ["04 · Learn", "Three rejected $50 dinners is a preference. Waylo stops suggesting them."],
-];
+/**
+ * A beat is written for the crew's own prompts, where the traveller is "they". The person
+ * reading this page is that traveller, so the pronouns are turned around here rather than
+ * keeping a second, drift-prone copy of the roster for the landing page.
+ */
+const aboutYou = (beat: string) =>
+  beat
+    .replace(/\bthey are\b/g, "you are")
+    .replace(/\bthey\b/g, "you")
+    .replace(/\btheir\b/g, "your")
+    .replace(/\bthem\b/g, "you");
 
-/** One icon per loop step, aligned with LOOP by index. */
-const LOOP_ICONS = [Eye, Brain, Zap, GraduationCap];
+/** Keeps a section heading off the very top edge, whether JS scrolls to it or the hash does. */
+
+/**
+ * In-page links jumped, which loses the reader's place on a long page.
+ *
+ * Scheduled a frame late and aimed at the window rather than the element: clicking the
+ * link scrolls it into view for focus first, and a smooth scroll started in the same turn
+ * is cancelled by that, which left the nav doing nothing at all. Anyone who has asked
+ * their system for less motion still gets the instant jump.
+ */
+/**
+ * The landing page holds to one screenful on a desktop window.
+ *
+ * Only there: a laptop in a short window, or any phone, still needs to scroll, and
+ * clipping the prompt box to honour a layout rule would be the worse trade. The two
+ * long sections that used to sit below the fold now live on /how-it-works.
+ */
+const LANDING_FIT = `
+@media (min-width: 1000px) and (min-height: 640px) {
+  .wl-landing { height: 100dvh; overflow: hidden; }
+
+  /* "safe" matters: a column taller than its row overflows in BOTH directions when it is
+     centred, which pushed the eyebrow up over the logo. Safe centring gives up and aligns
+     to the start rather than spilling past it. */
+  .wl-landing-hero { min-height: 0; align-content: safe center; align-items: safe center;
+    row-gap: clamp(14px, 2.2vh, 40px);
+    padding-top: clamp(6px, 1.2vh, 24px); padding-bottom: clamp(6px, 1.2vh, 24px); }
+  .wl-landing-hero > * { min-height: 0; }
+  .wl-hero-art { min-height: 0; height: 100%; max-height: min(56dvh, 520px); }
+}
+
+/* A laptop window is shorter than it is wide. Give the vertical rhythm back by trimming
+   the parts that cost the most height and say the least. */
+@media (min-width: 1000px) and (max-height: 860px) {
+  .wl-landing-hero h1 { font-size: clamp(30px, 3.2vw, 46px) !important; }
+  .wl-landing-hero p { margin-bottom: 14px !important; }
+  .wl-eg { margin-top: 12px !important; }
+  .wl-eg button:nth-child(n+3) { display: none; }
+  .wl-eg button { font-size: 12.5px; padding: 7px 12px; }
+}
+@media (min-width: 1000px) and (max-height: 700px) {
+  .wl-eg { display: none !important; }
+}
+`;
 
 export default function Landing() {
   const router = useRouter();
@@ -24,24 +75,46 @@ export default function Landing() {
   const [starting, setStarting] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
+  /**
+   * What the box says so far.
+   *
+   * The chips under it used to announce a Montreal trip nobody had asked for, so they now
+   * only ever repeat the sentence back: a fact the parser cannot read is simply absent.
+   */
+  const chips = useMemo(() => {
+    const read = factsIn(prompt);
+    return [
+      read.destination,
+      read.days === null ? null : `${read.days} day${read.days === 1 ? "" : "s"}`,
+      read.dailyBudget === null ? null : `${money(read.dailyBudget, read.currency)} / day`,
+    ].filter((c): c is string => Boolean(c));
+  }, [prompt]);
+
+  /** Named while we are still resolving it, so the wait says where we are going. */
+  const heading = factsIn(prompt).destination;
+
   /** Read the sentence, resolve the city, then hand off to the wizard. */
   async function start() {
     if (starting) return;
     setStarting(true);
     setProblem(null);
 
-    const created = await createTrip(prompt);
+    const created = (await createTrip(prompt)) as CreateTripResult | null;
     if (!created) {
       setProblem("I could not place that city. Try naming it on its own — \"Lisbon\", \"Kyoto\".");
       setStarting(false);
       return;
     }
     rememberTrip(created.trip);
+    // Onboarding turns each of these into a question, and the app shell stays shut until
+    // they are answered — a plan built on invented dates and budgets is not a plan.
+    rememberNeeds(created.trip.id, created.missing);
     router.push("/onboarding");
   }
 
   return (
     <div
+      className="wl-landing"
       style={{
         animation: "wl-screen .46s cubic-bezier(.22,.68,.16,1) both",
         minHeight: "100vh",
@@ -49,6 +122,14 @@ export default function Landing() {
         flexDirection: "column",
       }}
     >
+      <style>{LANDING_FIT}</style>
+
+      {/* Resolving the city and reading the sentence takes a network round trip, and the
+          button going grey was the only sign of it — so the page looked frozen for the
+          few seconds before the wizard opened. */}
+      {starting && (
+        <RouteProgress label={heading ? `Finding ${heading}…` : "Reading your trip…"} />
+      )}
       <header
         style={{
           display: "flex",
@@ -65,11 +146,14 @@ export default function Landing() {
           <span style={{ fontSize: 19, fontWeight: 800, letterSpacing: "-.02em" }}>Waylo</span>
         </div>
         <nav style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
-          <a href="#how-it-works" style={{ fontSize: 14, fontWeight: 600, color: "var(--wl-muted)", padding: "8px 4px" }}>
+          {/* One destination rather than two anchors: the loop and the crew explain the
+              same thing, and the Agents item used to open /profile — the in-trip "You"
+              screen, which has no trip to show from here. */}
+          <Link
+            href="/how-it-works"
+            style={{ fontSize: 14, fontWeight: 600, color: "var(--wl-muted)", padding: "8px 4px" }}
+          >
             How it works
-          </a>
-          <Link href="/profile" style={{ fontSize: 14, fontWeight: 600, color: "var(--wl-muted)", padding: "8px 4px" }}>
-            Agents
           </Link>
           <Link
             href="/today"
@@ -92,6 +176,7 @@ export default function Landing() {
       </header>
 
       <div
+        className="wl-landing-hero"
         style={{
           flex: 1,
           display: "grid",
@@ -207,7 +292,7 @@ export default function Landing() {
               }}
             >
               <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-                {["Montreal · 4 days", "$150 / day", "2 travellers"].map((t) => (
+                {chips.map((t) => (
                   <span
                     key={t}
                     style={{
@@ -254,7 +339,7 @@ export default function Landing() {
             </div>
           )}
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 18 }}>
+          <div className="wl-eg" style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 18 }}>
             {EXAMPLES.map((label) => (
               <button
                 key={label}
@@ -279,41 +364,6 @@ export default function Landing() {
         <HeroArt />
       </div>
 
-      <div
-        id="how-it-works"
-        style={{
-          borderTop: "1px solid var(--wl-line)",
-          padding: "clamp(26px,3vw,42px) clamp(18px,4vw,54px)",
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))",
-          gap: 22,
-        }}
-      >
-        {LOOP.map(([title, body], i) => {
-          const Icon = LOOP_ICONS[i];
-          return (
-          <div key={title}>
-            <div
-              style={{
-                fontFamily: MONO,
-                fontSize: 11,
-                letterSpacing: ".14em",
-                textTransform: "uppercase",
-                color: "var(--wl-muted)",
-                marginBottom: 8,
-                display: "flex",
-                alignItems: "center",
-                gap: 7,
-              }}
-            >
-              <Icon size={14} strokeWidth={2} color="currentColor" />
-              {title}
-            </div>
-            <p style={{ margin: 0, fontSize: 14.5, color: "var(--wl-ink-2)" }}>{body}</p>
-          </div>
-          );
-        })}
-      </div>
 
       <div style={{ padding: "0 clamp(18px,4vw,54px) 26px" }}>
         <Link href="/credits" style={{ fontSize: 12.5, color: "var(--wl-muted)" }}>
@@ -328,6 +378,7 @@ export default function Landing() {
 function HeroArt() {
   return (
     <div
+      className="wl-hero-art"
       style={{
         position: "relative",
         minHeight: "clamp(400px,52vw,560px)",

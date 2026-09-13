@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Waylo · Montreal route</title>
+<title>Waylo · route</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
 <style>
@@ -110,59 +110,28 @@
   var MODE = q.get('mode') || 'walk';
   var MODE_STYLE = {
     walk:    { color: '#17150F', weight: 2.5, opacity: .5,  dashArray: '7 7',  label: 'Walking route' },
-    transit: { color: '#F08C00', weight: 4,   opacity: .85, dashArray: null,   label: 'Métro + walking' },
+    transit: { color: '#F08C00', weight: 4,   opacity: .85, dashArray: null,   label: 'Transit + walking' },
     taxi:    { color: '#E0603C', weight: 4,   opacity: .8,  dashArray: null,   label: 'By road' }
   };
   var style = MODE_STYLE[MODE] || MODE_STYLE.walk;
 
-  // Draw the real geometry for this mode — streets for walking and taxi, the métro's
-  // own path for transit. Straight lines between stops are not a route; they were only
-  // ever a placeholder, and they stay as the fallback if the lookup fails.
-  var drawnStraight = null;
-  function drawStraight() {
-    if (single || drawnStraight) return;
-    drawnStraight = L.polyline(stops.map(function (s) { return s.ll; }), {
-      color: style.color, weight: style.weight, opacity: style.opacity, dashArray: style.dashArray
-    }).addTo(map);
+  // OSM's own text, and the stop names off the query string, land inside innerHTML.
+  function esc(value) {
+    return String(value == null ? '' : value).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
   }
 
-  if (!single) {
-    (custom ? Promise.reject() : fetch('/api/trips/trip_montreal_demo/geometry?mode=' + encodeURIComponent(MODE)))
-      .then(function (r) { return r.json(); })
-      .then(function (body) {
-        if (!body || !body.ok || !body.data.paths || !body.data.paths.length) return drawStraight();
-        body.data.paths.forEach(function (path) {
-          if (!path.points || path.points.length < 2) return;
-          var riding = path.kind === 'ride';
-          L.polyline(path.points, {
-            color: riding ? (path.colour || style.color) : '#17150F',
-            weight: riding ? 5 : 2.5,
-            opacity: riding ? .9 : .45,
-            dashArray: riding ? null : '6 6'
-          }).addTo(map);
-        });
-      })
-      .catch(drawStraight);
+  // Small legend so the mode is readable without the surrounding UI, with a second line
+  // for anything drawn that is not a real route. Built before the route is requested so
+  // the lookup can report itself into it.
+  var noteEl = null;
+  function setNote(text) {
+    if (!noteEl) return;
+    noteEl.textContent = text || '';
+    noteEl.style.display = text ? 'block' : 'none';
   }
 
-  // In transit mode, show the métro stations themselves so the route reads as a
-  // transit map rather than a line between two cafés.
-  if (MODE === 'transit' && !single) {
-    fetch('./montreal-transit.json')
-      .then(function (r) { return r.json(); })
-      .then(function (net) {
-        var bounds = L.latLngBounds(stops.map(function (s) { return s.ll; })).pad(0.25);
-        (net.stops || []).forEach(function (st) {
-          if (!st.lat || !bounds.contains([st.lat, st.lng])) return;
-          L.circleMarker([st.lat, st.lng], {
-            radius: 4, color: '#fff', weight: 1.5, fillColor: '#F08C00', fillOpacity: .95
-          }).addTo(map).bindPopup('<div class="wl-pop"><b>' + st.name + '</b><span>Métro · STM</span></div>');
-        });
-      })
-      .catch(function () { /* stations are a nicety; the route still draws */ });
-  }
-
-  // Small legend so the mode is readable without the surrounding UI.
   var legend = L.control({ position: 'bottomleft' });
   legend.onAdd = function () {
     var el = L.DomUtil.create('div');
@@ -170,9 +139,87 @@
       'font:600 11px Manrope,system-ui,sans-serif;color:#3A352B;box-shadow:0 2px 8px rgba(23,21,15,.18)';
     el.innerHTML = '<span style="display:inline-block;width:10px;height:3px;vertical-align:middle;' +
       'margin-right:6px;background:' + style.color + '"></span>' + style.label;
+    noteEl = L.DomUtil.create('div', '', el);
+    noteEl.style.cssText = 'margin-top:4px;max-width:230px;font-weight:600;color:#8A7F6C;display:none';
     return el;
   };
   legend.addTo(map);
+
+  // The stops the map is drawing, in the order it draws them. The geometry endpoint is
+  // stateless on serverless — the trip lives in the traveller's browser — so the route
+  // to plan travels in the query string rather than being looked up server-side. Asking
+  // without them is what made every real trip fall back to a straight line.
+  function stopsParam() {
+    return stops.map(function (s) { return s.ll[0].toFixed(5) + ',' + s.ll[1].toFixed(5); }).join('|');
+  }
+
+  var GEOMETRY = '/api/trips/trip_montreal_demo/geometry';
+
+  // A straight line between two stops is not a route, so it is never drawn in the mode's
+  // own weight and colour: finely dashed, faded, and it says why it is there.
+  function drawStraight(reason) {
+    if (single) return;
+    L.polyline(stops.map(function (s) { return s.ll; }), {
+      color: style.color, weight: 2.5, opacity: .5, dashArray: '3 9'
+    }).addTo(map).bindPopup('<div class="wl-pop"><b>Straight line, not a route</b><span>' + esc(reason) + '</span></div>');
+    setNote('Straight line — ' + reason);
+  }
+
+  function drawPath(path) {
+    var riding = path.kind === 'ride';
+    var line = L.polyline(path.points, {
+      color: path.provisional ? style.color : riding ? (path.colour || style.color) : '#17150F',
+      weight: path.provisional ? 2.5 : riding ? 5 : 2.5,
+      opacity: path.provisional ? .5 : riding ? .9 : .45,
+      dashArray: path.provisional ? '3 9' : riding ? null : '6 6'
+    }).addTo(map);
+    if (path.label) {
+      line.bindPopup('<div class="wl-pop"><b>' + esc(path.label) + '</b><span>' +
+        (path.provisional ? 'No line mapped between these stops' : style.label) + '</span></div>');
+    }
+  }
+
+  // Real geometry for this mode: the pedestrian network for walking, the road network
+  // for taxi, and each transit line's own alignment between the stations it serves.
+  if (!single) {
+    setNote('Drawing the real route…');
+    fetch(GEOMETRY + '?mode=' + encodeURIComponent(MODE) + '&stops=' + encodeURIComponent(stopsParam()))
+      .then(function (r) { return r.json(); })
+      .then(function (body) {
+        if (!body || !body.ok) return drawStraight('the routing service did not answer');
+        var paths = (body.data.paths || []).filter(function (p) { return p.points && p.points.length > 1; });
+        if (!paths.length) return drawStraight('no route came back for these stops');
+        paths.forEach(drawPath);
+        setNote(paths.some(function (p) { return p.provisional; })
+          ? 'Dashed sections are straight hops — no route was available for them'
+          : '');
+      })
+      .catch(function () { drawStraight('the routing service could not be reached'); });
+  }
+
+  // In transit mode, show the stops the traveller could actually board at, from
+  // OpenStreetMap, for whatever city is on screen. A city with nothing mapped draws
+  // nothing: an empty map is the honest answer, and inventing stations is not.
+  var KIND_LABEL = { rail: 'Rail / metro stop', bus: 'Bus stop', ferry: 'Ferry terminal' };
+
+  if (MODE === 'transit' && !single) {
+    fetch(GEOMETRY + '?what=stations&stops=' + encodeURIComponent(stopsParam()))
+      .then(function (r) { return r.json(); })
+      .then(function (body) {
+        if (!body || !body.ok) return;
+        (body.data.stations || []).forEach(function (st) {
+          var bus = st.kind === 'bus';
+          L.circleMarker([st.lat, st.lng], {
+            radius: bus ? 3 : 4.5, color: '#fff', weight: 1.5,
+            fillColor: bus ? '#B9A27A' : '#F08C00', fillOpacity: .95
+          }).addTo(map).bindPopup('<div class="wl-pop"><b>' + esc(st.name) + '</b><span>' +
+            // Whatever network or operator OSM records for this stop; the kind of stop it
+            // is when it records neither. Never an operator borrowed from another city.
+            esc(st.network || KIND_LABEL[st.kind] || 'Transit stop') + '</span></div>');
+        });
+      })
+      .catch(function () { /* stations are a nicety; the route still draws */ });
+  }
 
   stops.forEach(function (s, i) {
     L.marker(s.ll, {

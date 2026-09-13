@@ -46,14 +46,55 @@ export function parseHours(raw: string | undefined, countryCode?: string, coords
   }
 }
 
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/**
+ * The weekday and minute-of-day where the place stands, not where the process runs.
+ *
+ * `weekly` is a nominal table: a declared weekday and a declared wall clock. Comparing it
+ * against `getDay()`/`getHours()` measured a US-Eastern server against Barcelona tags —
+ * six hours out, and for most of the evening a different weekday entirely, so Saturday's
+ * row was offered as "today" while it was already Sunday there.
+ *
+ * Without a timezone this stays on the old machine-local behaviour, which is all the
+ * callers that have no destination to hand can offer.
+ */
+export function localClock(when: Date, timeZone?: string): { day: number; minutes: number } {
+  if (!timeZone) return { day: when.getDay(), minutes: when.getHours() * 60 + when.getMinutes() };
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).formatToParts(when);
+    const at = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+    const day = WEEKDAYS.indexOf(at("weekday"));
+    // Some ICU builds render midnight as "24" under hour12:false.
+    const hour = Number(at("hour")) % 24;
+    const minute = Number(at("minute"));
+    if (day < 0 || !Number.isFinite(hour) || !Number.isFinite(minute)) throw new Error("unreadable clock");
+    return { day, minutes: hour * 60 + minute };
+  } catch {
+    return { day: when.getDay(), minutes: when.getHours() * 60 + when.getMinutes() };
+  }
+}
+
 /** True when we positively know it is open; undefined when hours are unknown. */
-export function openAt(hours: OpeningHours | undefined, when: Date): boolean | undefined {
+export function openAt(hours: OpeningHours | undefined, when: Date, timeZone?: string): boolean | undefined {
   if (!hours || hours.unknown || hours.weekly.length === 0) return undefined;
-  const hm = when.getHours() * 60 + when.getMinutes();
+  const { day, minutes: hm } = localClock(when, timeZone);
   return hours.weekly.some((w) => {
-    if (w.day !== when.getDay()) return false;
+    if (w.day !== day) return false;
     const [oh, om] = w.opens.split(":").map(Number);
     const [ch, cm] = w.closes.split(":").map(Number);
-    return hm >= oh * 60 + om && hm <= ch * 60 + cm;
+    const opens = oh * 60 + om;
+    const closes = ch * 60 + cm;
+    // "24/7" expands to 00:00–00:00, and a naive comparison read that as a zero-minute
+    // window — which reported every 24-hour pharmacy as shut. A close at or before the
+    // open means the span runs through midnight.
+    if (closes <= opens) return hm >= opens || hm <= closes;
+    return hm >= opens && hm <= closes;
   });
 }

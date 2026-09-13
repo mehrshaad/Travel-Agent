@@ -18,14 +18,17 @@ interface NominatimResult {
 export function createGeocodeProvider(cache: Cache, userAgent: string, deps: GeocodeDeps): GeocodeProvider {
   return {
     async geocode(query: string, ctx?: ProviderContext): Promise<Destination | null> {
-      const key = normalizeKey(["nominatim", query]);
+      // Versioned: the cached shape is a Destination, and when a field is added to it the
+      // old entries are not merely stale, they are missing data the app now relies on.
+      // A Porto trip kept coming back without its country code for exactly this reason.
+      const key = normalizeKey(["nominatim", "v4", query]);
       const cached = await cache.get<Destination>(key);
       if (cached) return cached;
 
       try {
         const rows = await fetchJson<NominatimResult[]>({
-          url: `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=jsonv2&limit=1&addressdetails=1`,
-          headers: { "User-Agent": userAgent },
+          url: `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=jsonv2&limit=1&addressdetails=1&accept-language=en`,
+          headers: { "User-Agent": userAgent, "Accept-Language": "en" },
           tool: "nominatim",
           rateLimitKey: "nominatim",
           minIntervalMs: 1100, // their usage policy is 1 req/s
@@ -42,6 +45,7 @@ export function createGeocodeProvider(cache: Cache, userAgent: string, deps: Geo
           query,
           city: addr.city || addr.town || addr.municipality || addr.village || hit.name || query,
           country: addr.country || "",
+          countryCode: addr.country_code?.toLowerCase(),
           coords,
           timezone,
         };

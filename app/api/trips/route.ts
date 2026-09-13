@@ -1,8 +1,10 @@
 import { ok, fail } from "@/lib/api/respond";
+import { currencyFor } from "@/lib/money";
+import { factsIn } from "@/lib/profile";
 import { providers, trace } from "@/lib/providers";
 import { parsePrompt } from "@/lib/trips/parse";
 import { newTripId, putTrip } from "@/lib/trips/store";
-import type { CreateTripRequest, Trip } from "@/types";
+import type { CreateTripRequest, Trip, TripFact } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +14,8 @@ export const dynamic = "force-dynamic";
  * The model reads the sentence, Nominatim resolves the city, Open-Meteo supplies the
  * timezone. Nothing is city-specific. This never throws on a bad parse — unresolved
  * fields come back as defaults listed in `assumed` so the UI can ask — because a thrown
- * error here is a dead landing page.
+ * error here is a dead landing page. `missing` is the harder subset: defaults the crew
+ * must not plan on at all until a human confirms them.
  */
 export async function POST(req: Request) {
   const started = Date.now();
@@ -20,6 +23,9 @@ export async function POST(req: Request) {
   const prompt = (body.prompt ?? body.destination ?? "").toString();
 
   const { parsed, byModel } = await parsePrompt(prompt);
+  // The parse gives a usable value for everything; this says which of them the sentence
+  // actually contained, which is a different question and the one onboarding asks.
+  const stated = factsIn(prompt);
   const destinationQuery = body.destination || parsed.destination;
 
   if (!destinationQuery) {
@@ -34,6 +40,12 @@ export async function POST(req: Request) {
       started,
     );
   }
+
+  // The parser only sees what was typed. Unless the traveller wrote a symbol or a code,
+  // the country they are going to decides the currency — otherwise Barcelona was billed
+  // in dollars and every price on screen was quietly wrong.
+  const typedCurrency = /[€£¥]|\b(usd|eur|gbp|cad|jpy|aud)\b/i.test(prompt);
+  const currency = body.currency ?? (typedCurrency ? parsed.currency : currencyFor(destination.country, destination.countryCode));
 
   const start = body.startDate ?? new Date().toISOString().slice(0, 10);
   const end =
@@ -51,7 +63,7 @@ export async function POST(req: Request) {
       interests: body.interests ?? parsed.interests,
       dailyBudget: {
         amount: body.dailyBudget ?? parsed.dailyBudget,
-        currency: body.currency ?? parsed.currency,
+        currency,
       },
       pace: parsed.pace,
       transportModes: ["walk", "transit"],
@@ -67,11 +79,21 @@ export async function POST(req: Request) {
 
   // Everything the parser inferred rather than read, so the UI can confirm it.
   const assumed = [
-    /\d+\s*(days?|nights?)/i.test(prompt) ? null : "days",
-    /[$€£]\s*\d|\d+\s*(usd|eur|gbp|cad|dollars?|euros?)/i.test(prompt) ? null : "dailyBudget",
+    stated.days === null ? "days" : null,
+    stated.dailyBudget === null ? "dailyBudget" : null,
     body.startDate ? null : "startDate",
   ].filter((x): x is string => x !== null);
 
+  // The facts nobody can plan around. A trip with an invented length, an invented budget
+  // and no interests is fiction dressed as a plan, so the UI collects these before the
+  // crew is dispatched. "destination" is not among them: the request already failed above
+  // if the sentence named no findable city.
+  const missing = [
+    body.endDate || stated.days !== null ? null : "days",
+    body.dailyBudget !== undefined || stated.dailyBudget !== null ? null : "dailyBudget",
+    body.interests?.length || stated.interests.length ? null : "interests",
+  ].filter((x): x is TripFact => x !== null);
+
   putTrip(trip, assumed);
-  return ok({ trip, assumed, parsedBy: byModel ? "model" : "rules" }, started, { usage: p.usage() });
+  return ok({ trip, assumed, missing, parsedBy: byModel ? "model" : "rules" }, started, { usage: p.usage() });
 }

@@ -138,6 +138,49 @@ live weather hour, remaining daily budget, opening hours, `UserProfile`, nearby 
 
 ---
 
+### `POST /api/trips/:id/crew`
+
+What the Crew screen asks. Request `{ trip, itinerary, question, location? }` — the trip and
+the plan travel with the question because the server keeps no state between requests.
+
+Response `data`: `{ agent, role, color, text, itinerary, change, dayNumber }`.
+
+Routing is by keyword (`lib/crew.ts`), never by a model call. The day is resolved from the
+question ("tomorrow", a weekday, "day 2", or the day they are on) so an answer about
+tomorrow is grounded in tomorrow's stops, forecast and remaining budget rather than in
+whatever is open right now. Nearby suggestions are picked one-per-category, because
+Overpass returns far more cafés than museums and a plain top-six was six places to eat.
+
+`itinerary` is non-null only when the plan actually changed; the client caches it and every
+other screen picks it up. The model classifies the intent, never the result — the edit
+itself is deterministic. A named stop that cannot be found changes nothing and is reported
+as such.
+
+---
+
+### `GET /api/trips/:id/stays`
+
+`?lat&lng&radius&country&stops=lat,lng|…`. Real lodging from Overpass, ranked by mean
+walking distance to the stops the caller sends. No prices: OpenStreetMap has no nightly
+rates, and inventing one is worse than omitting it.
+
+---
+
+### `GET /api/trips/:id/essentials`
+
+`?lat&lng&radius&country`. Pharmacies, groceries, ATMs, laundry and tourist info near the
+traveller, grouped by kind with real distances. Opening hours only where OSM has them;
+`openNow` stays undefined when they are unknown, so nothing is ever claimed to be shut.
+
+---
+
+### `GET /api/trips/:id/suggestions`
+
+Interest chips the destination can actually satisfy, counted from Overpass. An interest is
+offered only when the city has at least three of them.
+
+---
+
 ### `POST /api/trips/:id/signals`
 
 Request: `{ "signals": BehaviorSignal[] }`. Batched — flush on an interval or on

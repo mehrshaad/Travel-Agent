@@ -3,6 +3,8 @@ import type {
 } from "@/types";
 import type { ProviderRegistry } from "@/types/providers";
 import { rank } from "@/lib/agents/live";
+import { convert } from "@/lib/money";
+import { CATEGORIES, categoriesForInterests } from "@/lib/providers/tags";
 import { haversineMeters } from "@/lib/providers/normalize";
 
 const STOPS_PER_DAY: Record<Trip["preferences"]["pace"], number> = {
@@ -72,15 +74,38 @@ export async function generateItinerary(
   const dates = datesFor(trip);
   const perDay = STOPS_PER_DAY[trip.preferences.pace];
 
-  const [explore, eat, forecast] = await Promise.all([
-    providers.places.searchPlaces(
-      { near: centre, radiusMeters: 2500, categories: [], section: "explore", limit: 60 },
-      trace as never,
-    ),
-    providers.places.searchPlaces(
-      { near: centre, radiusMeters: 2000, categories: [], section: "eat", limit: 40 },
-      trace as never,
-    ),
+  /**
+   * Widen until there is enough to fill the trip.
+   *
+   * A fixed 2.5 km worked for a dense city and starved a small one: St. Catharines came
+   * back with barely enough places for one day, so days two and three had a single stop
+   * each. Each ring is a separate Overpass call, so stop as soon as there is enough.
+   */
+  const gather = async (section: "explore" | "eat", want: number) => {
+    let found: Place[] = [];
+    for (const radiusMeters of [2500, 6000, 15000]) {
+      found = await providers.places.searchPlaces(
+        { near: centre, radiusMeters, categories: [], section, countryCode: trip.destination.countryCode, limit: 80 },
+        trace as never,
+      );
+      if (found.length >= want) break;
+    }
+    return found;
+  };
+
+  // Asked for by name, so a stated interest is never lost to truncation.
+  const wantedCategories = categoriesForInterests(trip.preferences.interests as string[])
+    .filter((c) => CATEGORIES[c]?.section === "explore");
+
+  const [explore, byInterest, eat, forecast] = await Promise.all([
+    gather("explore", perDay * dates.length * 2),
+    wantedCategories.length
+      ? providers.places.searchPlaces(
+          { near: centre, radiusMeters: 6000, categories: wantedCategories, countryCode: trip.destination.countryCode, limit: 60 },
+          trace as never,
+        )
+      : Promise.resolve([] as Place[]),
+    gather("eat", dates.length * 3),
     providers.weather
       .forecast(centre, dates[0], dates[dates.length - 1], trace as never)
       .catch(() => null),
@@ -94,10 +119,31 @@ export async function generateItinerary(
     maxWalkMeters: trip.preferences.maxWalkMeters,
   };
 
-  const rankedExplore = rank(explore, rankOpts).map((r) => r.place);
+  const byId = new Map<string, Place>();
+  for (const place of [...explore, ...byInterest]) byId.set(place.id, place);
+  const rankedExplore = rank([...byId.values()], rankOpts).map((r) => r.place);
   const rankedEat = rank(eat, rankOpts).map((r) => r.place);
 
   const usedIds = new Set<string>();
+
+  /**
+   * Interests the traveller named that the plan has not honoured yet.
+   *
+   * Ranking is a single global sort, so one strong interest crowds out the rest: a
+   * traveller who asked for "parks, coffee, bookshops" got six bookshops and no park,
+   * because every bookshop outscored every park. Each slot first tries to cover an
+   * interest nothing on the plan speaks to.
+   */
+  const uncovered = new Set(trip.preferences.interests as string[]);
+
+  /**
+   * How often each category has been used across the whole trip.
+   *
+   * Per-day variety alone produced three identical days — park, bookshop, café, park,
+   * bookshop — because the ranking that wins on Monday wins again on Tuesday. Rarer
+   * categories go first so the days stop rhyming.
+   */
+  const tripCategories = new Map<string, number>();
 
   /**
    * Pick the best unused candidate, but keep the day varied.
@@ -112,20 +158,31 @@ export async function generateItinerary(
     previous: Place | null,
   ): Place | undefined => {
     const MAX_PER_CATEGORY = 2;
+    const free = (p: Place) => !usedIds.has(p.id);
+    const underCap = (p: Place) => (dayCategories.get(p.category) ?? 0) < MAX_PER_CATEGORY;
+
+    // The last resort used to ignore the cap entirely, which is how a day ended up with
+    // three bookshops in a town that also has parks. Try every category we have not used
+    // today before giving the same one a third slot.
+    // Stable: ranking order is preserved inside a category-use tier, so the best place
+    // still wins among equally fresh categories.
+    const freshest = (list: Place[]) =>
+      list.length
+        ? list.reduce((best, p) =>
+            (tripCategories.get(p.category) ?? 0) < (tripCategories.get(best.category) ?? 0) ? p : best,
+          )
+        : undefined;
 
     const pick =
-      pool.find(
-        (p) =>
-          !usedIds.has(p.id) &&
-          p.category !== previous?.category &&
-          (dayCategories.get(p.category) ?? 0) < MAX_PER_CATEGORY,
-      ) ??
-      pool.find((p) => !usedIds.has(p.id) && (dayCategories.get(p.category) ?? 0) < MAX_PER_CATEGORY) ??
-      pool.find((p) => !usedIds.has(p.id));
+      freshest(pool.filter((p) => free(p) && underCap(p) && p.category !== previous?.category)) ??
+      freshest(pool.filter((p) => free(p) && underCap(p))) ??
+      pool.find((p) => free(p) && !dayCategories.has(p.category)) ??
+      pool.find(free);
 
     if (pick) {
       usedIds.add(pick.id);
       dayCategories.set(pick.category, (dayCategories.get(pick.category) ?? 0) + 1);
+      tripCategories.set(pick.category, (tripCategories.get(pick.category) ?? 0) + 1);
     }
     return pick;
   };
@@ -148,11 +205,20 @@ export async function generateItinerary(
       const pool = anchor.want === "eat" ? rankedEat : rankedExplore;
       const preferred = hourWet ? pool.filter((p) => p.ambience === "indoor") : pool;
 
+      const owed = preferred.filter((p) => p.interests.some((i) => uncovered.has(i)));
       const place: Place | undefined =
-        take(preferred, dayCategories, previous) ?? take(pool, dayCategories, previous);
+        take(owed, dayCategories, previous) ??
+        take(preferred, dayCategories, previous) ??
+        take(pool, dayCategories, previous);
       if (!place) continue;
+      for (const i of place.interests) uncovered.delete(i);
 
-      const cost = place.avgCost?.amount ?? 0;
+      // A place is priced in its own city's money and the budget is the traveller's.
+      // Taking the bare amount and stamping the budget's code on it turned a dollar
+      // estimate into the same number of euros for free, so the day never added up.
+      const cost = place.avgCost
+        ? convert(place.avgCost.amount, place.avgCost.currency, trip.preferences.dailyBudget.currency)
+        : 0;
       spent += cost;
       const distance = previous ? haversineMeters(previous.coords, place.coords) : 0;
       walked += distance;

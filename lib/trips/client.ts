@@ -12,6 +12,7 @@ import type { Itinerary, Trip } from "@/types";
 const KEY = "waylo.tripId";
 const TRIP_KEY = "waylo.trip";
 const ITIN_KEY = "waylo.itinerary";
+const PROMPT_KEY = "waylo.prompt";
 export const DEMO_TRIP_ID = "trip_montreal_demo";
 
 export function currentTripId(): string {
@@ -36,6 +37,7 @@ export function clearCurrentTrip() {
     window.sessionStorage.removeItem(KEY);
     window.sessionStorage.removeItem(TRIP_KEY);
     window.sessionStorage.removeItem(ITIN_KEY);
+    window.sessionStorage.removeItem(PROMPT_KEY);
   } catch {
     /* nothing to clear */
   }
@@ -55,7 +57,25 @@ async function call<T>(url: string, init?: RequestInit, timeoutMs = 45000): Prom
   }
 }
 
+export function rememberPrompt(prompt: string) {
+  try {
+    window.sessionStorage.setItem(PROMPT_KEY, prompt);
+  } catch {
+    /* private mode — the crew screen simply opens without the original ask */
+  }
+}
+
+/** What the traveller actually typed, so the Crew screen can open on their own words. */
+export function currentPrompt(): string | null {
+  try {
+    return window.sessionStorage.getItem(PROMPT_KEY);
+  } catch {
+    return null;
+  }
+}
+
 export function createTrip(prompt: string) {
+  rememberPrompt(prompt);
   return call<{ trip: Trip; assumed: string[]; parsedBy: string }>("/api/trips", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -109,4 +129,42 @@ export async function fetchTrip(id: string) {
 
 export async function fetchItinerary(id: string) {
   return cache<Itinerary>(ITIN_KEY) ?? (await call<Itinerary>(`/api/trips/${id}/itinerary`));
+}
+
+export interface CrewAnswer {
+  agent: string;
+  role: string;
+  color: string;
+  text: string;
+  /** Set only when the crew actually changed the plan. */
+  itinerary: Itinerary | null;
+  change: string | null;
+  dayNumber: number | null;
+}
+
+/**
+ * Ask the crew, carrying the plan with the question.
+ *
+ * The server holds nothing between requests, so an answer about "tomorrow" is only
+ * possible if tomorrow travels with the question. When the crew changes something, the
+ * new itinerary is cached here so every other screen sees it immediately.
+ */
+export async function askCrew(question: string, location?: { lat: number; lng: number }): Promise<CrewAnswer | null> {
+  const id = currentTripId();
+  const answer = await call<CrewAnswer>(
+    `/api/trips/${id}/crew`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        trip: cache<Trip>(TRIP_KEY),
+        itinerary: cache<Itinerary>(ITIN_KEY),
+        question,
+        location,
+      }),
+    },
+    40000,
+  );
+  if (answer?.itinerary) cache(ITIN_KEY, answer.itinerary);
+  return answer;
 }

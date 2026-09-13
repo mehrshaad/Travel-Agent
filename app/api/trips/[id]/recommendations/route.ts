@@ -24,6 +24,11 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     lat: Number(url.searchParams.get("lat") ?? MONTREAL.lat),
     lng: Number(url.searchParams.get("lng") ?? MONTREAL.lng),
   };
+  // Country and interests used to be hardcoded to Montreal, so a Barcelona trip asked
+  // Overpass for Canadian opening hours and ranked against someone else's taste.
+  const country = (url.searchParams.get("country") || "ca").toLowerCase();
+  const interests = (url.searchParams.get("interests") || "").split(",").filter(Boolean);
+  const budget = Number(url.searchParams.get("budget") ?? 86);
 
   try {
     const p = providers();
@@ -33,7 +38,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
         radiusMeters: radius,
         categories: category ? [category] : [],
         section,
-        countryCode: "ca",
+        countryCode: country,
         limit: 60,
       }, trace()),
       todayWeather(p, near, trace().onToolCall as never),
@@ -44,8 +49,9 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     const ranked = rank(places, {
       from: near,
       weather: hourNow(day),
-      remainingBudget: 86,
-      interests: ["history", "culture", "books", "coffee", "food", "walking", "art"],
+      remainingBudget: budget,
+      currency: url.searchParams.get("currency") ?? undefined,
+      interests: (interests.length ? interests : ["history", "culture", "books", "coffee", "food", "walking", "art"]) as never,
       maxWalkMeters: 6000,
     }).slice(0, limit);
 
