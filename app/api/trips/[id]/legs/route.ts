@@ -40,7 +40,15 @@ function km(metres: number): string {
  * distance and says so. Where a mode is genuinely not worth it — a 400 m hop — that
  * mode reports the walk instead rather than inventing a journey.
  */
-export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  return handle(req, ctx);
+}
+
+export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  return handle(req, ctx);
+}
+
+async function handle(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const started = Date.now();
   const { id } = await ctx.params;
   if (!knownTrip(id)) return fail({ code: "not_found", message: `No trip ${id}` }, started);

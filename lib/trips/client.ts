@@ -10,6 +10,8 @@ import type { Itinerary, Trip } from "@/types";
  * Falls back to the seeded Montreal trip so the app is never empty on a cold open.
  */
 const KEY = "waylo.tripId";
+const TRIP_KEY = "waylo.trip";
+const ITIN_KEY = "waylo.itinerary";
 export const DEMO_TRIP_ID = "trip_montreal_demo";
 
 export function currentTripId(): string {
@@ -32,6 +34,8 @@ export function setCurrentTripId(id: string) {
 export function clearCurrentTrip() {
   try {
     window.sessionStorage.removeItem(KEY);
+    window.sessionStorage.removeItem(TRIP_KEY);
+    window.sessionStorage.removeItem(ITIN_KEY);
   } catch {
     /* nothing to clear */
   }
@@ -59,14 +63,50 @@ export function createTrip(prompt: string) {
   });
 }
 
-export function planTrip(id: string) {
-  return call<Itinerary>(`/api/trips/${id}/plan`, { method: "POST" }, 60000);
+function cache<T>(key: string, value?: T): T | null {
+  try {
+    if (value !== undefined) {
+      window.sessionStorage.setItem(key, JSON.stringify(value));
+      return value;
+    }
+    const raw = window.sessionStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
 }
 
-export function fetchTrip(id: string) {
-  return call<Trip>(`/api/trips/${id}`);
+export function rememberTrip(trip: Trip) {
+  setCurrentTripId(trip.id);
+  cache(TRIP_KEY, trip);
 }
 
-export function fetchItinerary(id: string) {
-  return call<Itinerary>(`/api/trips/${id}/itinerary`);
+/**
+ * Plans the trip, sending the trip itself along.
+ *
+ * Serverless gives no guarantee that the instance which created the trip is the one
+ * that plans it, so the browser carries the state rather than the server holding it.
+ */
+export async function planTrip(id: string) {
+  const trip = cache<Trip>(TRIP_KEY);
+  const itinerary = await call<Itinerary>(
+    `/api/trips/${id}/plan`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ trip }),
+    },
+    60000,
+  );
+  if (itinerary) cache(ITIN_KEY, itinerary);
+  return itinerary;
+}
+
+/** Cached first — the server may not have this trip on the instance that answers. */
+export async function fetchTrip(id: string) {
+  return cache<Trip>(TRIP_KEY) ?? (await call<Trip>(`/api/trips/${id}`));
+}
+
+export async function fetchItinerary(id: string) {
+  return cache<Itinerary>(ITIN_KEY) ?? (await call<Itinerary>(`/api/trips/${id}/itinerary`));
 }

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight, Brain, CloudRain, Eye, GraduationCap, Sparkles, Zap } from "lucide-react";
 import { EXAMPLES } from "@/lib/mock/ui";
-import { createTrip, setCurrentTripId } from "@/lib/trips/client";
+import { createTrip, rememberTrip } from "@/lib/trips/client";
 import { MONO, SERIF } from "@/components/ui";
 
 const LOOP = [
@@ -36,7 +36,7 @@ export default function Landing() {
       setStarting(false);
       return;
     }
-    setCurrentTripId(created.trip.id);
+    rememberTrip(created.trip);
     router.push("/onboarding");
   }
 
